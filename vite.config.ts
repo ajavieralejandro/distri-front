@@ -7,7 +7,8 @@ import { defineConfig } from 'vitest/config';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'pages' ? '/distri-front/' : '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -17,6 +18,9 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  preview: {
+    port: 4173,
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
@@ -24,4 +28,4 @@ export default defineConfig({
     fileParallelism: false,
     maxWorkers: 1,
   },
-});
+}));

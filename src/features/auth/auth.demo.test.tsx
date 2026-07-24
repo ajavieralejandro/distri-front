@@ -7,22 +7,30 @@ import { LoginPage } from '@/pages/LoginPage';
 import { renderWithProviders } from '@/test/render-with-providers';
 
 describe('demo login', () => {
-  it.each([
-    ['Administrador', 'DISTRIBUTOR_ADMIN'],
-    ['Dueño', 'COMMERCE_OWNER'],
-  ] as const)(
-    'logs in the %s account through the UI',
-    async (account, role) => {
-      const user = userEvent.setup();
-      renderWithProviders(<LoginPage />, { route: '/login' });
+  it('logs in the administrator through quick access', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />, { route: '/login' });
 
-      await user.click(
-        screen.getByRole('button', { name: new RegExp(`Usar ${account}`) }),
-      );
-      await user.click(screen.getByRole('button', { name: 'Ingresar' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Entrar como Administrador' }),
+    );
 
-      await waitFor(() => expect(readDemoSession()?.role).toBe(role));
-      expect(window.sessionStorage.getItem(DEMO_SESSION_KEY)).not.toBeNull();
-    },
-  );
+    await waitFor(() =>
+      expect(readDemoSession()?.role).toBe('DISTRIBUTOR_ADMIN'),
+    );
+    expect(window.sessionStorage.getItem(DEMO_SESSION_KEY)).not.toBeNull();
+  });
+
+  it('logs in the commerce owner through fill + submit', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />, { route: '/login' });
+
+    await user.click(screen.getByRole('tab', { name: 'Comercio' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Completar credenciales del rol' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Ingresar' }));
+
+    await waitFor(() => expect(readDemoSession()?.role).toBe('COMMERCE_OWNER'));
+  });
 });

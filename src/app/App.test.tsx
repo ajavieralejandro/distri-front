@@ -10,16 +10,18 @@ describe('App', () => {
     renderWithProviders(<App />, { route: '/login' });
 
     expect(
-      screen.getByRole('heading', { name: 'Inicio de sesión' }),
+      screen.getByRole('heading', { name: 'Ingresar a Distrisoft' }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/cuenta demo/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('tablist', { name: 'Tipo de experiencia demo' }),
+    ).toBeInTheDocument();
   });
 
   it('redirects "/" to "/login"', async () => {
     renderWithProviders(<App />, { route: '/' });
 
     expect(
-      await screen.findByRole('heading', { name: 'Inicio de sesión' }),
+      await screen.findByRole('heading', { name: 'Ingresar a Distrisoft' }),
     ).toBeInTheDocument();
   });
 
@@ -27,7 +29,7 @@ describe('App', () => {
     renderWithProviders(<App />, { route: '/admin/dashboard' });
 
     expect(
-      await screen.findByRole('heading', { name: 'Inicio de sesión' }),
+      await screen.findByRole('heading', { name: 'Ingresar a Distrisoft' }),
     ).toBeInTheDocument();
   });
 

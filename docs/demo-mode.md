@@ -9,10 +9,10 @@ VITE_DATA_SOURCE=mock   # mock | api
 VITE_DEMO_MODE=true     # true | false
 ```
 
-| Modo   | Comportamiento                                                                                                 |
-| ------ | -------------------------------------------------------------------------------------------------------------- |
-| `mock` | Inicia MSW (solo fuera de producción), intercepta endpoints provisionales, persiste cambios en `localStorage`. |
-| `api`  | No inicia MSW. Usa HTTP real. Si un endpoint falla, se muestra el error. **Sin fallback a mock.**              |
+| Modo   | Comportamiento                                                                                                        |
+| ------ | --------------------------------------------------------------------------------------------------------------------- |
+| `mock` | Inicia MSW si además `VITE_DEMO_MODE=true` (dev, preview o Pages), intercepta endpoints y persiste en `localStorage`. |
+| `api`  | No inicia MSW. Usa HTTP real. Si un endpoint falla, se muestra el error. **Sin fallback a mock.**                     |
 
 Producción recomendada:
 
@@ -66,8 +66,12 @@ Flags locales en `src/app/config/feature-flags.ts` (`analytics`, `billing`, `cas
 ## Cómo eliminar MSW
 
 1. `VITE_DATA_SOURCE=api` y `VITE_DEMO_MODE=false`
-2. El worker no arranca en builds productivos (`shouldStartMockWorker`)
+2. `shouldStartMockWorker` exige ambos flags mock+demo; el modo API no inicia MSW
 3. Cuando la API real exista, reemplazá handlers por endpoints reales sin cambiar la capa de features (hooks → api → httpClient)
+
+## Publicación demo (GitHub Pages)
+
+Ver [deployment-github-pages.md](deployment-github-pages.md). La build Pages usa `.env.pages` (`mock` + `demo` + hash routing).
 
 ## Dinero
 

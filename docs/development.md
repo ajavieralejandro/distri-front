@@ -20,14 +20,16 @@ VITE_API_URL=http://localhost:3000/api
 VITE_APP_ENV=development
 VITE_DATA_SOURCE=mock
 VITE_DEMO_MODE=true
+# VITE_ROUTER_MODE=browser
 ```
 
 - `VITE_DATA_SOURCE=mock|api`
 - `VITE_DEMO_MODE=true|false`
+- `VITE_ROUTER_MODE=browser|hash` (opcional; se infiere desde Vite `base`)
 - Sin secretos en `VITE_*`
-- En producción: `api` + `DEMO_MODE=false` (MSW no arranca)
+- API productiva: `api` + `DEMO_MODE=false` (MSW no arranca)
 
-Ver [modo demo](demo-mode.md).
+Ver [modo demo](demo-mode.md) y [GitHub Pages](deployment-github-pages.md).
 
 ## Ejecución
 
@@ -35,7 +37,7 @@ Ver [modo demo](demo-mode.md).
 npm run dev
 ```
 
-MSW registra el worker desde `public/mockServiceWorker.js` solo en modo mock no productivo.
+MSW usa `import.meta.env.BASE_URL + mockServiceWorker.js` cuando `VITE_DATA_SOURCE=mock` y `VITE_DEMO_MODE=true` (también en builds Pages).
 
 ## Calidad
 
@@ -45,11 +47,12 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
+npm run build:pages
 ```
 
 ## Áreas demo
 
-- Admin: `/admin/*` (dashboard, analytics, clientes, productos, pedidos, inventario, pagos, billing, usuarios, auditoría)
+- Admin: `/admin/*`
 - Depósito: `/operations/warehouse/*`
 - Caja: `/operations/cashier/*`
 - Reparto: `/operations/delivery/*`
@@ -59,11 +62,11 @@ Ver [roles-and-permissions.md](roles-and-permissions.md) y [operations.md](opera
 
 ## API vs mock
 
-|             | mock          | api           |
-| ----------- | ------------- | ------------- |
-| MSW         | Sí (dev/test) | No            |
-| Health real | No requerido  | `GET /health` |
-| Fallback    | Nunca         | Nunca         |
+|             | mock                                      | api           |
+| ----------- | ----------------------------------------- | ------------- |
+| MSW         | Sí si `demoMode=true` (dev, test o Pages) | No            |
+| Health real | No requerido                              | `GET /health` |
+| Fallback    | Nunca                                     | Nunca         |
 
 ## CORS / API apagada
 

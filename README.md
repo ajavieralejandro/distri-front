@@ -14,10 +14,17 @@ copy .env.example .env
 npm run dev
 ```
 
-Cuentas (password `demo1234`): admin, ventas, deposito, caja, reparto, comercio, compras, cajero.comercio — ver login.
+Demo publicada (GitHub Pages):
+
+```text
+https://ajavieralejandro.github.io/distri-front/#/login
+```
+
+Build Pages local: `npm run build:pages`
 
 ## Docs
 
+- [Despliegue GitHub Pages](docs/deployment-github-pages.md)
 - [Roles](docs/roles-and-permissions.md)
 - [Operaciones](docs/operations.md)
 - [Analytics](docs/analytics.md)

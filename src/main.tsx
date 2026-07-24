@@ -1,11 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
 
 import { App } from '@/app/App';
+import { env } from '@/app/config/env';
 import { AppErrorBoundary } from '@/app/errors/AppErrorBoundary';
 import { AppProviders } from '@/app/providers/AppProviders';
-import { env } from '@/app/config/env';
+import { AppRouterProvider } from '@/app/router/AppRouterProvider';
 import { shouldStartMockWorker } from '@/mocks/should-start-worker';
 import '@/styles/index.css';
 
@@ -16,19 +16,20 @@ if (!rootElement) {
 }
 
 async function prepareApp() {
-  if (shouldStartMockWorker(env, import.meta.env.PROD)) {
+  if (shouldStartMockWorker(env)) {
     const { startMockWorker } = await import('@/mocks/browser');
     await startMockWorker();
   }
 }
+
 prepareApp().then(() =>
   createRoot(rootElement).render(
     <StrictMode>
       <AppErrorBoundary>
         <AppProviders>
-          <BrowserRouter>
+          <AppRouterProvider>
             <App />
-          </BrowserRouter>
+          </AppRouterProvider>
         </AppProviders>
       </AppErrorBoundary>
     </StrictMode>,
