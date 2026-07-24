@@ -1,54 +1,118 @@
-import { Link } from 'react-router-dom';
-
-import { ApiStatus } from '@/shared/components/ApiStatus';
-import { PageHeader } from '@/shared/components/PageHeader';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { env } from '@/app/config/env';
+import { useDemoSession, useLoginMutation } from '@/features/auth/hooks';
+import {
+  DEMO_ACCOUNTS,
+  loginSchema,
+  type LoginFormValues,
+} from '@/features/auth/schemas';
 
 export function LoginPage() {
+  const session = useDemoSession();
+  const navigate = useNavigate();
+  const login = useLoginMutation();
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
+  if (session && env.isMockDataSource)
+    return (
+      <Navigate
+        to={session.role === 'ADMIN' ? '/admin/dashboard' : '/commerce/catalog'}
+        replace
+      />
+    );
+  if (!env.isMockDataSource)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+        <section className="max-w-lg rounded-xl bg-white p-8 shadow">
+          <h1 className="text-xl font-semibold">Autenticación no disponible</h1>
+          <p className="mt-3 text-slate-600">
+            La autenticación demo está deshabilitada y la autenticación por API
+            todavía no está lista.
+          </p>
+        </section>
+      </div>
+    );
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
       <section className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">
           Distrisoft
         </p>
-        <PageHeader
-          title="Inicio de sesión"
-          description="La autenticación real se implementará cuando la API exponga sesiones seguras con cookies HttpOnly."
-        />
-
-        <div className="space-y-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-700">
-          <p>
-            Esta pantalla es estructural y pertenece a la etapa técnica inicial.
-          </p>
-          <p>
-            Todavía no hay login funcional, usuarios mock, tokens ni roles
-            simulados.
-          </p>
-          <p className="font-medium text-slate-900">
-            Estado: pendiente de la etapa de autenticación.
-          </p>
+        <h1 className="mt-2 text-2xl font-semibold text-slate-900">
+          Inicio de sesión
+        </h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Elegí una cuenta demo o ingresá sus credenciales.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {DEMO_ACCOUNTS.map((account) => (
+            <button
+              key={account.email}
+              type="button"
+              onClick={() => {
+                setValue('email', account.email);
+                setValue('password', account.password);
+              }}
+              className="rounded border border-teal-300 bg-teal-50 px-3 py-2 text-sm text-teal-900"
+            >
+              Usar {account.label}
+            </button>
+          ))}
         </div>
-
-        <div className="mt-6">
-          <ApiStatus />
-        </div>
-
-        <nav
-          aria-label="Accesos estructurales temporales"
-          className="mt-8 flex flex-wrap gap-3 text-sm"
+        <form
+          className="mt-6 space-y-4"
+          onSubmit={handleSubmit((values) =>
+            login.mutate(values, {
+              onSuccess: (result) =>
+                navigate(
+                  result.role === 'ADMIN'
+                    ? '/admin/dashboard'
+                    : '/commerce/catalog',
+                ),
+            }),
+          )}
         >
-          <Link
-            className="rounded-md border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-50"
-            to="/admin/dashboard"
+          <label className="block text-sm font-medium">
+            Correo
+            <input
+              aria-label="Correo"
+              className="mt-1 w-full rounded border p-2"
+              {...register('email')}
+            />
+          </label>
+          {errors.email && (
+            <p className="text-sm text-red-700">{errors.email.message}</p>
+          )}
+          <label className="block text-sm font-medium">
+            Contraseña
+            <input
+              aria-label="Contraseña"
+              type="password"
+              className="mt-1 w-full rounded border p-2"
+              {...register('password')}
+            />
+          </label>
+          {errors.password && (
+            <p className="text-sm text-red-700">{errors.password.message}</p>
+          )}
+          {login.error && (
+            <p role="alert" className="text-sm text-red-700">
+              {login.error.message}
+            </p>
+          )}
+          <button
+            disabled={login.isPending}
+            className="w-full rounded bg-teal-700 px-4 py-2 text-white disabled:opacity-50"
           >
-            Ir al panel admin
-          </Link>
-          <Link
-            className="rounded-md border border-slate-300 px-3 py-2 text-slate-700 hover:bg-slate-50"
-            to="/commerce/catalog"
-          >
-            Ir al portal comercios
-          </Link>
-        </nav>
+            {login.isPending ? 'Ingresando…' : 'Ingresar'}
+          </button>
+        </form>
       </section>
     </div>
   );

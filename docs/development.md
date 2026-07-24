@@ -2,9 +2,8 @@
 
 ## Requisitos
 
-- Node.js LTS (verificado con v22.x)
+- Node.js LTS
 - npm 10+
-- API local opcional en `http://localhost:3000/api` para el health check
 
 ## Instalación
 
@@ -14,27 +13,21 @@ npm install
 copy .env.example .env
 ```
 
-## Variables de entorno
-
-Archivo de referencia: `.env.example`
+## Variables
 
 ```env
 VITE_API_URL=http://localhost:3000/api
 VITE_APP_ENV=development
+VITE_DATA_SOURCE=mock
+VITE_DEMO_MODE=true
 ```
 
-Valores permitidos de `VITE_APP_ENV`:
+- `VITE_DATA_SOURCE=mock|api`
+- `VITE_DEMO_MODE=true|false`
+- Sin secretos en `VITE_*`
+- En producción: `api` + `DEMO_MODE=false` (MSW no arranca)
 
-- `development`
-- `staging`
-- `production`
-- `test`
-
-Notas:
-
-- Las variables `VITE_*` quedan expuestas en el bundle. No colocar secretos ahí.
-- `.env` no se versiona.
-- Si falta una variable obligatoria o es inválida, la app falla al iniciar con un mensaje explícito.
+Ver [modo demo](demo-mode.md).
 
 ## Ejecución
 
@@ -42,7 +35,7 @@ Notas:
 npm run dev
 ```
 
-Vite escucha en `http://localhost:5173`.
+MSW registra el worker desde `public/mockServiceWorker.js` solo en modo mock no productivo.
 
 ## Calidad
 
@@ -54,47 +47,14 @@ npm run test
 npm run build
 ```
 
-Comandos útiles adicionales:
+## API vs mock
 
-```powershell
-npm run format
-npm run test:watch
-npm run preview
-```
+|             | mock          | api           |
+| ----------- | ------------- | ------------- |
+| MSW         | Sí (dev/test) | No            |
+| Health real | No requerido  | `GET /health` |
+| Fallback    | Nunca         | Nunca         |
 
-## Relación con la API
+## CORS / API apagada
 
-| Frontend                                 | API                          |
-| ---------------------------------------- | ---------------------------- |
-| `VITE_API_URL`                           | Prefijo global `/api`        |
-| `GET /health` (cliente)                  | `GET /api/health`            |
-| cookies futuras (`credentials: include`) | CORS con `credentials: true` |
-
-### API apagada
-
-No es un fallo del frontend. En desarrollo, `ApiStatus` mostrará **API no disponible** y la navegación estructural seguirá funcionando.
-
-### CORS
-
-Si el navegador bloquea el health check:
-
-1. Confirmar que la API está arriba.
-2. Verificar `CORS_ORIGIN` en la API (en desarrollo puede ser `*`, pero con cookies reales convendrá origen explícito).
-3. Confirmar que el frontend llama a `http://localhost:3000/api/...` y no a una ruta relativa incorrecta.
-
-## Estructura relevante
-
-```text
-src/app         shell técnico
-src/pages       rutas / placeholders
-src/shared      HTTP, UI base, utilidades
-docs/           arquitectura y ADRs
-```
-
-## Próximas etapas (no implementadas)
-
-1. Autenticación real con cookies HttpOnly.
-2. Catálogo y productos.
-3. Carrito y pedidos.
-4. Stock y cuenta corriente.
-5. Pagos.
+En modo `api`, si el backend no responde, la UI muestra error (no datos ficticios). En modo `mock`, el backend no es necesario.
