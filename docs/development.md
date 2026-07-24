@@ -47,6 +47,16 @@ npm run test
 npm run build
 ```
 
+## Áreas demo
+
+- Admin: `/admin/*` (dashboard, analytics, clientes, productos, pedidos, inventario, pagos, billing, usuarios, auditoría)
+- Depósito: `/operations/warehouse/*`
+- Caja: `/operations/cashier/*`
+- Reparto: `/operations/delivery/*`
+- Comercio: `/commerce/*`
+
+Ver [roles-and-permissions.md](roles-and-permissions.md) y [operations.md](operations.md).
+
 ## API vs mock
 
 |             | mock          | api           |

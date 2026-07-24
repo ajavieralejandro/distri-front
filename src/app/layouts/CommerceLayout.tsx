@@ -6,13 +6,41 @@ import { useDemoSession, useLogoutMutation } from '@/features/auth/hooks';
 import { useCartStore } from '@/features/orders/cart-store';
 import { ResetDemoButton } from '@/features/demo/ResetDemoButton';
 import { DemoBanner } from '@/shared/components/DemoBanner';
+import { hasPermission } from '@/features/auth/permissions';
+import type { DemoRole, Permission } from '@/shared/types/demo';
+import { roleLabels } from '@/shared/lib/labels';
 
-const commerceNavItems = [
+const commerceNavItems: Array<{
+  to: string;
+  label: string;
+  roles?: DemoRole[];
+  permission?: Permission;
+}> = [
+  { to: '/commerce/dashboard', label: 'Resumen', roles: ['COMMERCE_OWNER'] },
   { to: '/commerce/catalog', label: 'Catálogo' },
   { to: '/commerce/cart', label: 'Carrito' },
   { to: '/commerce/orders', label: 'Pedidos' },
-  { to: '/commerce/account', label: 'Cuenta' },
-] as const;
+  {
+    to: '/commerce/account',
+    label: 'Cuenta',
+    permission: 'accounts:read_own' as const,
+  },
+  {
+    to: '/commerce/payments',
+    label: 'Pagos',
+    permission: 'payments:record' as const,
+  },
+  {
+    to: '/commerce/billing',
+    label: 'Facturas',
+    permission: 'billing:read_own' as const,
+  },
+  {
+    to: '/commerce/users',
+    label: 'Usuarios',
+    permission: 'users:manage_demo' as const,
+  },
+];
 
 function navClassName({ isActive }: { isActive: boolean }): string {
   return [
@@ -41,7 +69,10 @@ export function CommerceLayout() {
                 <p className="text-sm text-slate-600">Portal de comercios</p>
               </div>
               <div className="flex items-center gap-3 text-sm">
-                <span>{session?.displayName}</span>
+                <span>
+                  {session?.displayName} ·{' '}
+                  {session ? roleLabels[session.role] : ''}
+                </span>
                 <ResetDemoButton />
                 {env.isDevelopment && !env.isMockDataSource && <ApiStatus />}
                 <button
@@ -59,14 +90,23 @@ export function CommerceLayout() {
               aria-label="Navegación del portal de comercios"
               className="flex flex-wrap gap-2"
             >
-              {commerceNavItems.map((item) => (
-                <NavLink key={item.to} to={item.to} className={navClassName}>
-                  {item.label}
-                  {item.to === '/commerce/cart' && itemCount > 0
-                    ? ` (${itemCount})`
-                    : ''}
-                </NavLink>
-              ))}
+              {commerceNavItems
+                .filter(
+                  (item) =>
+                    (!item.roles ||
+                      (session && item.roles.includes(session.role))) &&
+                    (!item.permission ||
+                      (session &&
+                        hasPermission(session.role, item.permission))),
+                )
+                .map((item) => (
+                  <NavLink key={item.to} to={item.to} className={navClassName}>
+                    {item.label}
+                    {item.to === '/commerce/cart' && itemCount > 0
+                      ? ` (${itemCount})`
+                      : ''}
+                  </NavLink>
+                ))}
             </nav>
           </div>
         </header>

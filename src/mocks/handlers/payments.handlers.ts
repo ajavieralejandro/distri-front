@@ -7,17 +7,21 @@ import type {
 } from '@/shared/types/demo';
 import { HttpResponse, http } from 'msw';
 
-import { api, withLatency } from './utils';
+import { api, appendAudit, withLatency } from './utils';
 
 type CreatePaymentRequest = {
   commerceId?: unknown;
   amount?: unknown;
   method?: unknown;
+  clientOperationId?: unknown;
 };
 
 function isPaymentMethod(value: unknown): value is PaymentMethod {
   return (
-    value === 'TRANSFER' || value === 'CARD' || value === 'MERCADO_PAGO_DEMO'
+    value === 'CASH' ||
+    value === 'TRANSFER' ||
+    value === 'CARD' ||
+    value === 'MERCADO_PAGO_DEMO'
   );
 }
 
@@ -64,12 +68,22 @@ export const paymentHandlers = [
     const commerceId = body.commerceId;
     const amount = body.amount;
     const method = body.method;
+    const clientOperationId =
+      typeof body.clientOperationId === 'string'
+        ? body.clientOperationId
+        : undefined;
     const result = mutateDatabase((database) => {
       const commerce = database.commerces.find(
         (candidate) => candidate.id === commerceId,
       );
       if (!commerce) {
         return { error: 'Comercio no encontrado.' };
+      }
+      if (clientOperationId) {
+        const existing = database.payments.find(
+          (payment) => payment.clientOperationId === clientOperationId,
+        );
+        if (existing) return { payment: existing, duplicate: true };
       }
 
       const timestamp = new Date().toISOString();
@@ -83,6 +97,8 @@ export const paymentHandlers = [
         createdAt: timestamp,
         reference: `PAG-DEMO-${String(id).padStart(3, '0')}`,
         simulated: true,
+        clientOperationId,
+        recordedByUserId: 'usr-cashier',
       };
       commerce.balance = subtractMoney(commerce.balance, payment.amount);
       const movement: AccountMovement = {
@@ -98,11 +114,36 @@ export const paymentHandlers = [
       };
       database.payments.unshift(payment);
       database.accountMovements.unshift(movement);
-      return { payment };
+      const receipt = {
+        id: `rcp-${database.receiptSequence}`,
+        number: `DEMO-RC-${String(database.receiptSequence).padStart(6, '0')}`,
+        commerceId: commerce.id,
+        paymentId: payment.id,
+        issuedAt: timestamp,
+        amount: payment.amount,
+        paymentMethod: payment.method,
+        allocations: [
+          { description: 'Pago registrado en demo', amount: payment.amount },
+        ],
+        disclaimer: 'RECIBO DEMOSTRATIVO — SIN VALIDEZ FISCAL',
+      };
+      database.receiptSequence += 1;
+      database.receipts.unshift(receipt);
+      appendAudit(database, {
+        userId: 'usr-cashier',
+        userDisplayName: 'Caja Demo',
+        action: 'PAYMENT_RECORDED',
+        entityType: 'payment',
+        entityId: payment.id,
+        summary: `Pago ${payment.reference} registrado.`,
+      });
+      return { payment, duplicate: false };
     });
 
     return 'error' in result
       ? HttpResponse.json({ message: result.error }, { status: 404 })
-      : HttpResponse.json(result.payment, { status: 201 });
+      : HttpResponse.json(result.payment, {
+          status: result.duplicate ? 200 : 201,
+        });
   }),
 ];

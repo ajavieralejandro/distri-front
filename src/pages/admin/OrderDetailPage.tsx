@@ -14,10 +14,14 @@ import { formatMoney } from '@/shared/lib/money';
 import { ConfirmDialog } from '@/shared/components/ConfirmDialog';
 import { QueryState } from '@/shared/components/QueryState';
 import { PageHeader } from '@/shared/components/PageHeader';
+import { useDemoSession } from '@/features/auth/hooks';
+import { hasPermission } from '@/features/auth/permissions';
+import type { Permission } from '@/shared/types/demo';
 export function OrderDetailPage() {
   const { orderId } = useParams();
   const query = useOrderQuery(orderId);
   const update = useUpdateOrderStatusMutation();
+  const session = useDemoSession();
   const [next, setNext] = useState<OrderStatus>();
   const order = query.data;
   return (
@@ -42,15 +46,34 @@ export function OrderDetailPage() {
               ))}
             </ul>
             <div className="mt-4 flex flex-wrap gap-2">
-              {ORDER_TRANSITIONS[order.status].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setNext(status)}
-                  className="rounded border px-3 py-2 text-sm"
-                >
-                  {orderStatusLabels[status]}
-                </button>
-              ))}
+              {ORDER_TRANSITIONS[order.status]
+                .filter((status) => {
+                  const permissions: Partial<Record<OrderStatus, Permission>> =
+                    {
+                      CONFIRMED: 'orders:confirm',
+                      PREPARING: 'orders:prepare',
+                      READY_FOR_DISPATCH: 'orders:prepare',
+                      OUT_FOR_DELIVERY: 'orders:dispatch',
+                      DELIVERED: 'orders:deliver',
+                      CANCELLED: 'orders:cancel',
+                    };
+                  return (
+                    !permissions[status] ||
+                    Boolean(
+                      session &&
+                      hasPermission(session.role, permissions[status]!),
+                    )
+                  );
+                })
+                .map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setNext(status)}
+                    className="rounded border px-3 py-2 text-sm"
+                  >
+                    {orderStatusLabels[status]}
+                  </button>
+                ))}
             </div>
           </div>
         )}

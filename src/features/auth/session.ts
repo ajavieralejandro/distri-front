@@ -1,6 +1,6 @@
-import type { DemoSession } from '@/shared/types/demo';
+import { DEMO_ROLES, type DemoSession } from '@/shared/types/demo';
 
-export const DEMO_SESSION_KEY = 'distrisoft-demo-session-v1';
+export const DEMO_SESSION_KEY = 'distrisoft-demo-session-v2';
 
 let cachedRaw: string | null | undefined;
 let cachedSession: DemoSession | null = null;
@@ -26,7 +26,7 @@ function parseSession(raw: string | null): DemoSession | null {
     const parsed = JSON.parse(raw) as DemoSession;
     if (
       typeof parsed.userId !== 'string' ||
-      (parsed.role !== 'ADMIN' && parsed.role !== 'COMMERCE') ||
+      !DEMO_ROLES.includes(parsed.role) ||
       typeof parsed.displayName !== 'string' ||
       typeof parsed.email !== 'string'
     ) {

@@ -8,15 +8,17 @@ import { renderWithProviders } from '@/test/render-with-providers';
 
 describe('demo login', () => {
   it.each([
-    ['Administrador', 'ADMIN'],
-    ['Comercio', 'COMMERCE'],
+    ['Administrador', 'DISTRIBUTOR_ADMIN'],
+    ['Dueño', 'COMMERCE_OWNER'],
   ] as const)(
     'logs in the %s account through the UI',
     async (account, role) => {
       const user = userEvent.setup();
       renderWithProviders(<LoginPage />, { route: '/login' });
 
-      await user.click(screen.getByRole('button', { name: `Usar ${account}` }));
+      await user.click(
+        screen.getByRole('button', { name: new RegExp(`Usar ${account}`) }),
+      );
       await user.click(screen.getByRole('button', { name: 'Ingresar' }));
 
       await waitFor(() => expect(readDemoSession()?.role).toBe(role));

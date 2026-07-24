@@ -20,6 +20,8 @@ import { formatMoney } from '@/shared/lib/money';
 import { Modal } from '@/shared/components/Modal';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { QueryState } from '@/shared/components/QueryState';
+import { Can } from '@/features/auth/Can';
+import { createClientOperationId } from '@/shared/lib/id';
 
 export function AccountPage() {
   const session = useDemoSession();
@@ -48,6 +50,7 @@ export function AccountPage() {
         commerceId: session.commerceId,
         amount: values.amount,
         method: values.method,
+        clientOperationId: createClientOperationId(),
       },
       {
         onSuccess: (payment) => {
@@ -101,15 +104,17 @@ export function AccountPage() {
               ))}
             </div>
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                className="rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white"
-                onClick={() => setIsPaymentOpen(true)}
-              >
-                Simular pago
-              </button>
-            </div>
+            <Can permission="payments:record">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white"
+                  onClick={() => setIsPaymentOpen(true)}
+                >
+                  Simular pago
+                </button>
+              </div>
+            </Can>
 
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <h2 className="text-base font-semibold text-slate-900">
@@ -169,6 +174,7 @@ export function AccountPage() {
                 className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
                 {...form.register('method')}
               >
+                <option value="CASH">{paymentMethodLabels.CASH}</option>
                 <option value="TRANSFER">{paymentMethodLabels.TRANSFER}</option>
                 <option value="CARD">{paymentMethodLabels.CARD}</option>
                 <option value="MERCADO_PAGO_DEMO">

@@ -4,7 +4,15 @@ import type {
   DemoDatabase,
   InventoryItem,
   Order,
+  OrderItem,
+  OrderStatus,
+  OrderStatusEvent,
+  PickItemStatus,
   Product,
+} from '@/shared/types/demo';
+import {
+  DEMO_INVOICE_DISCLAIMER,
+  DEMO_RECEIPT_DISCLAIMER,
 } from '@/shared/types/demo';
 
 const now = new Date('2026-07-20T12:00:00.000Z');
@@ -244,17 +252,28 @@ const commerces: Commerce[] = [
 ];
 
 const inventory: InventoryItem[] = products.flatMap((product, index) => {
-  const physical = product.availableStock + (index % 3) * 4;
-  const warehouseId = index % 2 === 0 ? 'wh-1' : 'wh-2';
+  const reservedPrimary = (index % 3) * 4;
+  const availablePrimary = product.availableStock;
+  const physicalPrimary = availablePrimary + reservedPrimary;
+  const availableSecondary = 10 + (index % 5);
   return [
     {
-      id: `inv-${index + 1}`,
+      id: `inv-wh1-${index + 1}`,
       productId: product.id,
-      warehouseId,
-      physicalStock: physical,
-      reservedStock: physical - product.availableStock,
-      availableStock: product.availableStock,
+      warehouseId: 'wh-1',
+      physicalStock: physicalPrimary,
+      reservedStock: reservedPrimary,
+      availableStock: availablePrimary,
       lowStockThreshold: 15,
+    },
+    {
+      id: `inv-wh2-${index + 1}`,
+      productId: product.id,
+      warehouseId: 'wh-2',
+      physicalStock: availableSecondary,
+      reservedStock: 0,
+      availableStock: availableSecondary,
+      lowStockThreshold: 5,
     },
   ];
 });
@@ -266,12 +285,26 @@ function order(
   status: Order['status'],
   daysAgo: number,
   productIndexes: number[],
+  options: Pick<
+    Order,
+    'warehouseId' | 'routeId' | 'stopSequence' | 'priority'
+  > = {
+    warehouseId: 'wh-1',
+    priority: 'NORMAL',
+  },
 ): Order {
-  const items = productIndexes.map((productIndex, itemIndex) => {
+  const commerce = commerces.find((candidate) => candidate.id === commerceId)!;
+  const items: OrderItem[] = productIndexes.map((productIndex, itemIndex) => {
     const product = products[productIndex]!;
     const quantity = itemIndex + 1;
     const unitPrice = product.price;
     const lineTotal = (Number(unitPrice) * quantity).toFixed(2);
+    const isPrepared =
+      status === 'PREPARING' ||
+      status === 'READY_FOR_DISPATCH' ||
+      status === 'OUT_FOR_DELIVERY' ||
+      status === 'DELIVERED';
+    const pickStatus: PickItemStatus = isPrepared ? 'PICKED' : 'PENDING';
     return {
       productId: product.id,
       sku: product.sku,
@@ -279,46 +312,113 @@ function order(
       unitPrice,
       quantity,
       lineTotal,
+      preparedQuantity: isPrepared ? quantity : 0,
+      pickStatus,
+      missingQuantity: 0,
     };
   });
   const total = items
     .reduce((sum, item) => sum + Number(item.lineTotal), 0)
     .toFixed(2);
   const createdAt = iso(daysAgo);
+  const history: OrderStatusEvent[] = [
+    {
+      id: `${id}-event-1`,
+      orderId: id,
+      toStatus: 'PENDING',
+      userId: 'usr-sales',
+      userDisplayName: 'Ventas Demo',
+      createdAt,
+      note: 'Pedido creado',
+    },
+  ];
+  if (status !== 'PENDING') {
+    const fromStatus: OrderStatus = 'PENDING';
+    history.push({
+      id: `${id}-event-2`,
+      orderId: id,
+      fromStatus,
+      toStatus: status,
+      userId: status === 'DELIVERED' ? 'usr-driver' : 'usr-admin',
+      userDisplayName:
+        status === 'DELIVERED' ? 'Reparto Demo' : 'Administrador Demo',
+      createdAt: iso(Math.max(daysAgo - 1, 0)),
+      note: `Pedido ${status.toLowerCase()}`,
+    });
+  }
   return {
     id,
     number,
     commerceId,
+    branchId:
+      commerceId === 'com-1'
+        ? 'branch-1'
+        : commerceId === 'com-2'
+          ? 'branch-2'
+          : undefined,
+    warehouseId: options.warehouseId,
+    routeId: options.routeId,
     status,
+    priority: options.priority,
     createdAt,
     updatedAt: createdAt,
     items,
     subtotal: total,
     total,
-    history: [
-      { status: 'PENDING', at: createdAt, note: 'Pedido creado' },
-      ...(status === 'PENDING'
-        ? []
-        : [
-            {
-              status,
-              at: iso(Math.max(daysAgo - 1, 0)),
-              note: `Pedido ${status.toLowerCase()}`,
-            },
-          ]),
-    ],
+    history,
+    deliveryAddress: commerce.address,
+    deliveryContactName: commerce.tradeName,
+    deliveryContactPhone: commerce.phone,
+    deliveryWindow: '09:00 - 17:00',
+    stopSequence: options.stopSequence,
   };
 }
 
 const orders: Order[] = [
-  order('ord-1', 'PED-1001', 'com-1', 'DELIVERED', 14, [0, 3, 9]),
-  order('ord-2', 'PED-1002', 'com-2', 'DELIVERED', 12, [1, 4, 7]),
-  order('ord-3', 'PED-1003', 'com-3', 'CANCELLED', 10, [5, 8]),
-  order('ord-4', 'PED-1004', 'com-1', 'SHIPPED', 7, [2, 6, 10]),
-  order('ord-5', 'PED-1005', 'com-2', 'PREPARING', 4, [0, 4, 8]),
-  order('ord-6', 'PED-1006', 'com-3', 'CONFIRMED', 2, [3, 5, 9]),
-  order('ord-7', 'PED-1007', 'com-1', 'PENDING', 1, [1, 7]),
-  order('ord-8', 'PED-1008', 'com-2', 'PENDING', 0, [6, 10]),
+  order('ord-1', 'PED-1001', 'com-1', 'DELIVERED', 14, [0, 3, 9], {
+    warehouseId: 'wh-1',
+    routeId: 'route-1',
+    stopSequence: 1,
+    priority: 'NORMAL',
+  }),
+  order('ord-2', 'PED-1002', 'com-2', 'DELIVERED', 12, [1, 4, 7], {
+    warehouseId: 'wh-2',
+    routeId: 'route-2',
+    stopSequence: 1,
+    priority: 'HIGH',
+  }),
+  order('ord-3', 'PED-1003', 'com-3', 'CANCELLED', 10, [5, 8], {
+    warehouseId: 'wh-1',
+    priority: 'NORMAL',
+  }),
+  order('ord-4', 'PED-1004', 'com-1', 'OUT_FOR_DELIVERY', 7, [2, 6, 10], {
+    warehouseId: 'wh-1',
+    routeId: 'route-1',
+    stopSequence: 2,
+    priority: 'HIGH',
+  }),
+  order('ord-5', 'PED-1005', 'com-2', 'READY_FOR_DISPATCH', 4, [0, 4, 8], {
+    warehouseId: 'wh-1',
+    priority: 'NORMAL',
+  }),
+  order('ord-6', 'PED-1006', 'com-3', 'PREPARING', 2, [3, 5, 9], {
+    warehouseId: 'wh-1',
+    priority: 'NORMAL',
+  }),
+  order('ord-7', 'PED-1007', 'com-1', 'CONFIRMED', 1, [1, 7], {
+    warehouseId: 'wh-2',
+    priority: 'NORMAL',
+  }),
+  order('ord-8', 'PED-1008', 'com-2', 'PENDING', 0, [6, 10], {
+    warehouseId: 'wh-1',
+    priority: 'HIGH',
+  }),
+  order('ord-9', 'PED-1009', 'com-3', 'DELIVERED', 3, [0, 2], {
+    warehouseId: 'wh-1',
+    routeId: 'route-1',
+    stopSequence: 3,
+    priority: 'NORMAL',
+  }),
 ];
 
 const accountMovements: AccountMovement[] = [
@@ -440,16 +540,38 @@ const accountMovements: AccountMovement[] = [
 ];
 
 export function createInitialDatabase(): DemoDatabase {
+  const seededProducts = structuredClone(products).map((product) => ({
+    ...product,
+    availableStock: inventory
+      .filter((item) => item.productId === product.id)
+      .reduce((sum, item) => sum + item.availableStock, 0),
+  }));
+
   return {
-    version: 1,
+    version: 2,
+    distributorId: 'dist-1',
     categories: [
       { id: 'cat-1', name: 'Bebidas' },
       { id: 'cat-2', name: 'Almacén' },
       { id: 'cat-3', name: 'Limpieza' },
       { id: 'cat-4', name: 'Hogar' },
     ],
-    products: structuredClone(products),
+    products: seededProducts,
     commerces: structuredClone(commerces),
+    branches: [
+      {
+        id: 'branch-1',
+        commerceId: 'com-1',
+        name: 'Sucursal Centro',
+        address: 'Av. Rivadavia 1200, CABA',
+      },
+      {
+        id: 'branch-2',
+        commerceId: 'com-2',
+        name: 'Sucursal Norte',
+        address: 'Av. San Martín 850, CABA',
+      },
+    ],
     warehouses: [
       { id: 'wh-1', name: 'Depósito Central', code: 'CENTRAL' },
       { id: 'wh-2', name: 'Depósito Norte', code: 'NORTE' },
@@ -510,23 +632,190 @@ export function createInitialDatabase(): DemoDatabase {
         simulated: true,
       },
     ],
+    invoices: [
+      {
+        id: 'inv-1',
+        number: 'DEMO-FC-000001',
+        commerceId: 'com-1',
+        orderId: 'ord-1',
+        issuedAt: iso(14),
+        dueAt: iso(-1),
+        status: 'ISSUED_DEMO',
+        subtotal: orders[0]!.subtotal,
+        tax: '0.00',
+        total: orders[0]!.total,
+        items: structuredClone(orders[0]!.items),
+        disclaimer: DEMO_INVOICE_DISCLAIMER,
+      },
+      {
+        id: 'inv-2',
+        number: 'DEMO-FC-000002',
+        commerceId: 'com-2',
+        orderId: 'ord-2',
+        status: 'DRAFT',
+        subtotal: orders[1]!.subtotal,
+        tax: '0.00',
+        total: orders[1]!.total,
+        items: structuredClone(orders[1]!.items),
+        disclaimer: DEMO_INVOICE_DISCLAIMER,
+      },
+    ],
+    receipts: [
+      {
+        id: 'rcp-1',
+        number: 'DEMO-RC-000001',
+        commerceId: 'com-1',
+        paymentId: 'pay-1',
+        issuedAt: iso(8),
+        amount: '42000.00',
+        paymentMethod: 'TRANSFER',
+        allocations: [
+          {
+            invoiceId: 'inv-1',
+            description: 'Aplicación a factura demo',
+            amount: '42000.00',
+          },
+        ],
+        disclaimer: DEMO_RECEIPT_DISCLAIMER,
+      },
+      {
+        id: 'rcp-2',
+        number: 'DEMO-RC-000002',
+        commerceId: 'com-2',
+        paymentId: 'pay-2',
+        issuedAt: iso(5),
+        amount: '60000.00',
+        paymentMethod: 'CARD',
+        allocations: [
+          {
+            invoiceId: 'inv-2',
+            description: 'Aplicación a factura demo',
+            amount: '60000.00',
+          },
+        ],
+        disclaimer: DEMO_RECEIPT_DISCLAIMER,
+      },
+    ],
+    vehicles: [
+      { id: 'veh-1', label: 'Camión reparto 1', plate: 'AA 123 BB' },
+      { id: 'veh-2', label: 'Utilitario norte', plate: 'AB 456 CD' },
+    ],
+    routes: [
+      {
+        id: 'route-1',
+        name: 'Ruta Centro',
+        driverUserId: 'usr-driver',
+        vehicleId: 'veh-1',
+        status: 'PLANNED',
+      },
+      {
+        id: 'route-2',
+        name: 'Ruta Norte',
+        driverUserId: 'usr-driver-b',
+        vehicleId: 'veh-2',
+        status: 'PLANNED',
+      },
+    ],
+    auditEvents: [
+      {
+        id: 'audit-1',
+        userId: 'usr-admin',
+        userDisplayName: 'Administrador Demo',
+        action: 'ORDER_DELIVERED',
+        entityType: 'order',
+        entityId: 'ord-1',
+        createdAt: iso(14),
+        summary: 'Pedido PED-1001 entregado.',
+      },
+      {
+        id: 'audit-2',
+        userId: 'usr-cashier',
+        userDisplayName: 'Caja Demo',
+        action: 'PAYMENT_RECORDED',
+        entityType: 'payment',
+        entityId: 'pay-1',
+        createdAt: iso(8),
+        summary: 'Pago demo registrado.',
+      },
+    ],
     users: [
       {
-        id: 'usr-1',
+        id: 'usr-admin',
         email: 'admin@demo.distrisoft.local',
         password: 'demo1234',
         displayName: 'Administrador Demo',
-        role: 'ADMIN',
+        role: 'DISTRIBUTOR_ADMIN',
+        distributorId: 'dist-1',
       },
       {
-        id: 'usr-2',
+        id: 'usr-sales',
+        email: 'ventas@demo.distrisoft.local',
+        password: 'demo1234',
+        displayName: 'Ventas Demo',
+        role: 'SALES',
+        distributorId: 'dist-1',
+      },
+      {
+        id: 'usr-picker',
+        email: 'deposito@demo.distrisoft.local',
+        password: 'demo1234',
+        displayName: 'Depósito Demo',
+        role: 'WAREHOUSE_PICKER',
+        distributorId: 'dist-1',
+        warehouseId: 'wh-1',
+      },
+      {
+        id: 'usr-cashier',
+        email: 'caja@demo.distrisoft.local',
+        password: 'demo1234',
+        displayName: 'Caja Demo',
+        role: 'CASHIER',
+        distributorId: 'dist-1',
+      },
+      {
+        id: 'usr-driver',
+        email: 'reparto@demo.distrisoft.local',
+        password: 'demo1234',
+        displayName: 'Reparto Demo',
+        role: 'DRIVER',
+        distributorId: 'dist-1',
+        assignedRouteId: 'route-1',
+      },
+      {
+        id: 'usr-owner',
         email: 'comercio@demo.distrisoft.local',
         password: 'demo1234',
-        displayName: 'Comercio Demo',
-        role: 'COMMERCE',
+        displayName: 'Dueño Comercio Demo',
+        role: 'COMMERCE_OWNER',
         commerceId: 'com-1',
       },
+      {
+        id: 'usr-buyer',
+        email: 'compras@demo.distrisoft.local',
+        password: 'demo1234',
+        displayName: 'Compras Comercio Demo',
+        role: 'COMMERCE_BUYER',
+        commerceId: 'com-1',
+      },
+      {
+        id: 'usr-com-cashier',
+        email: 'cajero.comercio@demo.distrisoft.local',
+        password: 'demo1234',
+        displayName: 'Cajero Comercio Demo',
+        role: 'COMMERCE_CASHIER',
+        commerceId: 'com-1',
+        branchId: 'branch-1',
+      },
     ],
-    orderSequence: 1009,
+    orderSequence: 1010,
+    invoiceSequence: 3,
+    receiptSequence: 3,
+    featureFlags: {
+      analytics: true,
+      billing: true,
+      cashier: true,
+      warehouseOperations: true,
+      deliveryOperations: true,
+    },
   };
 }

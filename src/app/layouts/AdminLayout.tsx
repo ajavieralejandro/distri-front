@@ -6,15 +6,46 @@ import { env } from '@/app/config/env';
 import { useDemoSession, useLogoutMutation } from '@/features/auth/hooks';
 import { ResetDemoButton } from '@/features/demo/ResetDemoButton';
 import { DemoBanner } from '@/shared/components/DemoBanner';
+import { hasPermission } from '@/features/auth/permissions';
+import type { Permission } from '@/shared/types/demo';
+import { roleLabels } from '@/shared/lib/labels';
 
-const adminNavItems = [
+const adminNavItems: Array<{
+  to: string;
+  label: string;
+  permission?: Permission;
+}> = [
   { to: '/admin/dashboard', label: 'Dashboard' },
+  {
+    to: '/admin/analytics',
+    label: 'Analítica',
+    permission: 'analytics:view_global' as const,
+  },
   { to: '/admin/customers', label: 'Clientes' },
   { to: '/admin/products', label: 'Productos' },
   { to: '/admin/orders', label: 'Pedidos' },
-  { to: '/admin/inventory', label: 'Inventario' },
-  { to: '/admin/payments', label: 'Pagos' },
-] as const;
+  {
+    to: '/admin/inventory',
+    label: 'Inventario',
+    permission: 'inventory:read' as const,
+  },
+  {
+    to: '/admin/payments',
+    label: 'Pagos',
+    permission: 'payments:read_all' as const,
+  },
+  {
+    to: '/admin/billing',
+    label: 'Facturación',
+    permission: 'billing:read_all' as const,
+  },
+  {
+    to: '/admin/users',
+    label: 'Usuarios',
+    permission: 'users:manage_demo' as const,
+  },
+  { to: '/admin/audit', label: 'Auditoría', permission: 'audit:read' as const },
+];
 
 function navClassName({ isActive }: { isActive: boolean }): string {
   return [
@@ -62,16 +93,22 @@ export function AdminLayout() {
               isMobileNavOpen ? 'block' : 'hidden lg:block',
             ].join(' ')}
           >
-            {adminNavItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={navClassName}
-                onClick={() => setIsMobileNavOpen(false)}
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {adminNavItems
+              .filter(
+                (item) =>
+                  !item.permission ||
+                  (session && hasPermission(session.role, item.permission)),
+              )
+              .map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={navClassName}
+                  onClick={() => setIsMobileNavOpen(false)}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
           </nav>
         </aside>
 
@@ -81,7 +118,10 @@ export function AdminLayout() {
               Área operativa de la distribuidora
             </p>
             <div className="flex items-center gap-3">
-              <span className="text-sm">{session?.displayName}</span>
+              <span className="text-sm">
+                {session?.displayName} ·{' '}
+                {session ? roleLabels[session.role] : ''}
+              </span>
               <ResetDemoButton />
               {env.isDevelopment && !env.isMockDataSource && <ApiStatus />}
               <button

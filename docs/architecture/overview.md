@@ -6,21 +6,30 @@
 router → page → feature (hooks/api) → httpClient → MSW (mock) | API (api)
 ```
 
-| Carpeta     | Rol                                                            |
-| ----------- | -------------------------------------------------------------- |
-| `app/`      | Shell: providers, router, layouts, env                         |
-| `pages/`    | Pantallas enrutadas (delgadas)                                 |
-| `features/` | Dominio: auth, products, orders, inventory, accounts, payments |
-| `shared/`   | HTTP, UI base, money/decimal, tipos                            |
-| `mocks/`    | Fixtures + handlers MSW (solo demo)                            |
+| Carpeta     | Rol                                                                                          |
+| ----------- | -------------------------------------------------------------------------------------------- |
+| `app/`      | Shell: providers, router, layouts, env, feature flags                                        |
+| `pages/`    | Pantallas enrutadas (admin, commerce, operations)                                            |
+| `features/` | Dominio: auth, products, orders, inventory, accounts, payments, billing, analytics, delivery |
+| `shared/`   | HTTP, UI base, money/decimal, tipos provisionales                                            |
+| `mocks/`    | Fixtures + handlers MSW (solo demo)                                                          |
 
-`admin` y `commerce` son **layouts/áreas**, no features.
+Áreas de layout: `admin`, `commerce`, `operations/warehouse|cashier|delivery`.
 
 ## Estado
 
 - **Servidor:** TanStack Query
 - **Carrito (demo):** Zustand + persist local (`distrisoft-demo-cart-v1`)
-- **Sesión demo:** `sessionStorage` (estructura `DemoSession`, sin JWT)
+- **Sesión demo:** `sessionStorage` (`distrisoft-demo-session-v2`, sin JWT)
+- **Base demo:** `localStorage` (`distrisoft-demo-db-v2`)
+
+## Autorización demo (UX only)
+
+Roles y permisos centralizados en `features/auth/permissions.ts`. Guards de ruta y componente `Can` adaptan la UI.
+
+**La autorización definitiva será aplicada por Distrisoft API.** La interfaz solo adapta navegación y acciones visibles.
+
+Ver [roles-and-permissions.md](../roles-and-permissions.md) y [ADR 005](decisions/005-demo-rbac.md).
 
 ## Modo demo
 

@@ -33,10 +33,11 @@ describe('App', () => {
 
   it('renders admin dashboard when demo admin session exists', async () => {
     writeDemoSession({
-      userId: 'usr-1',
-      role: 'ADMIN',
+      userId: 'usr-admin',
+      role: 'DISTRIBUTOR_ADMIN',
       displayName: 'Admin Demo',
       email: 'admin@demo.distrisoft.local',
+      distributorId: 'dist-1',
     });
 
     renderWithProviders(<App />, { route: '/admin/dashboard' });

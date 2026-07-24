@@ -13,6 +13,7 @@ import type { InventoryItem } from '@/shared/types/demo';
 import { Modal } from '@/shared/components/Modal';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { QueryState } from '@/shared/components/QueryState';
+import { Can } from '@/features/auth/Can';
 
 export function InventoryPage() {
   const [search, setSearch] = useState('');
@@ -137,16 +138,18 @@ export function InventoryPage() {
                         {item.availableStock}
                       </td>
                       <td className="p-3">
-                        <button
-                          type="button"
-                          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
-                          onClick={() => {
-                            setSuccessMessage(null);
-                            setSelected(item);
-                          }}
-                        >
-                          Ajuste simulado
-                        </button>
+                        <Can permission="inventory:adjust">
+                          <button
+                            type="button"
+                            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50"
+                            onClick={() => {
+                              setSuccessMessage(null);
+                              setSelected(item);
+                            }}
+                          >
+                            Ajuste simulado
+                          </button>
+                        </Can>
                       </td>
                     </tr>
                   );

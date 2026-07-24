@@ -4,10 +4,11 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { env } from '@/app/config/env';
 import { useDemoSession, useLoginMutation } from '@/features/auth/hooks';
 import {
-  DEMO_ACCOUNTS,
+  DEMO_ACCOUNT_GROUPS,
   loginSchema,
   type LoginFormValues,
 } from '@/features/auth/schemas';
+import { getHomePath } from '@/features/auth/permissions';
 
 export function LoginPage() {
   const session = useDemoSession();
@@ -20,12 +21,7 @@ export function LoginPage() {
     formState: { errors },
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
   if (session && env.isMockDataSource)
-    return (
-      <Navigate
-        to={session.role === 'ADMIN' ? '/admin/dashboard' : '/commerce/catalog'}
-        replace
-      />
-    );
+    return <Navigate to={getHomePath(session.role)} replace />;
   if (!env.isMockDataSource)
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
@@ -50,31 +46,43 @@ export function LoginPage() {
         <p className="mt-2 text-sm text-slate-600">
           Elegí una cuenta demo o ingresá sus credenciales.
         </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          {DEMO_ACCOUNTS.map((account) => (
-            <button
-              key={account.email}
-              type="button"
-              onClick={() => {
-                setValue('email', account.email);
-                setValue('password', account.password);
-              }}
-              className="rounded border border-teal-300 bg-teal-50 px-3 py-2 text-sm text-teal-900"
-            >
-              Usar {account.label}
-            </button>
+        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Los roles solo adaptan esta experiencia demo. La API aplicará la
+          autenticación y autorización definitivas.
+        </p>
+        <div className="mt-5 space-y-4">
+          {DEMO_ACCOUNT_GROUPS.map((group) => (
+            <section key={group.group} aria-label={`Cuentas ${group.group}`}>
+              <h2 className="text-sm font-semibold text-slate-800">
+                {group.group}
+              </h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {group.accounts.map((account) => (
+                  <button
+                    key={account.email}
+                    type="button"
+                    title={account.description}
+                    onClick={() => {
+                      setValue('email', account.email);
+                      setValue('password', account.password);
+                    }}
+                    className="rounded border border-teal-300 bg-teal-50 px-3 py-2 text-left text-sm text-teal-900"
+                  >
+                    <span className="block font-medium">
+                      Usar {account.label}
+                    </span>
+                    <span className="block text-xs">{account.description}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
         <form
           className="mt-6 space-y-4"
           onSubmit={handleSubmit((values) =>
             login.mutate(values, {
-              onSuccess: (result) =>
-                navigate(
-                  result.role === 'ADMIN'
-                    ? '/admin/dashboard'
-                    : '/commerce/catalog',
-                ),
+              onSuccess: (result) => navigate(getHomePath(result.role)),
             }),
           )}
         >

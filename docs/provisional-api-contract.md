@@ -29,14 +29,16 @@ Base: `{VITE_API_URL}` (ej. `http://localhost:3000/api`)
 | GET    | `/customers`     |
 | GET    | `/customers/:id` |
 
-## Pedidos
+## Pedidos y preparación
 
-| Método | Ruta                 |
-| ------ | -------------------- |
-| GET    | `/orders`            |
-| GET    | `/orders/:id`        |
-| POST   | `/orders`            |
-| PATCH  | `/orders/:id/status` |
+| Método | Ruta                             |
+| ------ | -------------------------------- |
+| GET    | `/orders`                        |
+| GET    | `/orders/:id`                    |
+| POST   | `/orders`                        |
+| PATCH  | `/orders/:id/status`             |
+| PATCH  | `/orders/:id/prepare-items`      |
+| POST   | `/orders/:id/ready-for-dispatch` |
 
 ## Inventario
 
@@ -52,7 +54,43 @@ Base: `{VITE_API_URL}` (ej. `http://localhost:3000/api`)
 | GET    | `/accounts/:commerceId/summary`   |
 | GET    | `/accounts/:commerceId/movements` |
 | GET    | `/payments`                       |
-| POST   | `/payments`                       |
+| POST   | `/payments`                       | Idempotencia vía `clientOperationId` |
+
+## Facturación y recibos demo
+
+| Método | Ruta                   | Notas                         |
+| ------ | ---------------------- | ----------------------------- |
+| GET    | `/invoices`            | Disclaimer sin validez fiscal |
+| POST   | `/invoices`            | Solo pedidos `DELIVERED`      |
+| POST   | `/invoices/:id/issue`  | Emisión demostrativa          |
+| POST   | `/invoices/:id/cancel` | Cancelación demostrativa      |
+| GET    | `/receipts`            | Generados al registrar pagos  |
+| GET    | `/receipts/:id`        |                               |
+
+## Reparto
+
+| Método | Ruta                          |
+| ------ | ----------------------------- |
+| GET    | `/delivery/routes`            |
+| GET    | `/delivery/routes/:id`        |
+| POST   | `/delivery/routes/:id/start`  |
+| POST   | `/delivery/orders/:id/result` |
+
+## Analytics
+
+| Método | Ruta                  |
+| ------ | --------------------- |
+| GET    | `/analytics/admin`    |
+| GET    | `/analytics/commerce` |
+
+Derivados de fixtures/estado mock. Sustituibles por endpoints analíticos reales.
+
+## Usuarios y auditoría demo
+
+| Método | Ruta            |
+| ------ | --------------- |
+| GET    | `/users`        |
+| GET    | `/audit-events` |
 
 ## Admin
 

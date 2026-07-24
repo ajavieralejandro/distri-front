@@ -2,7 +2,7 @@ import type { DemoDatabase } from '@/shared/types/demo';
 
 import { createInitialDatabase } from './fixtures';
 
-export const STORAGE_KEY = 'distrisoft-demo-db-v1';
+export const STORAGE_KEY = 'distrisoft-demo-db-v2';
 
 let database: DemoDatabase | undefined;
 
@@ -36,11 +36,12 @@ export function loadDatabase(): DemoDatabase {
         parsed !== null &&
         typeof parsed === 'object' &&
         'version' in parsed &&
-        parsed.version === 1
+        parsed.version === 2
       ) {
         database = parsed as DemoDatabase;
         return database;
       }
+      window.localStorage.removeItem(STORAGE_KEY);
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
     }
@@ -69,6 +70,6 @@ export function resetDatabase(): DemoDatabase {
   }
 
   const freshDatabase = createInitialDatabase();
-  database = freshDatabase;
+  saveDatabase(freshDatabase);
   return freshDatabase;
 }

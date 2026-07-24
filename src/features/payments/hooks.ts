@@ -12,7 +12,7 @@ export const demoPaymentSchema = z.object({
   amount: z
     .string()
     .regex(/^\d+(\.\d{1,2})?$/, 'Ingresá un importe válido (ej. 1500.00)'),
-  method: z.enum(['TRANSFER', 'CARD', 'MERCADO_PAGO_DEMO']),
+  method: z.enum(['CASH', 'TRANSFER', 'CARD', 'MERCADO_PAGO_DEMO']),
 });
 
 export type DemoPaymentFormValues = z.infer<typeof demoPaymentSchema>;

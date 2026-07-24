@@ -1,10 +1,24 @@
 import { getDatabase } from '@/mocks/data/mock-database';
-import type { DemoSession } from '@/shared/types/demo';
+import type { DemoSession, DemoUser } from '@/shared/types/demo';
 import { HttpResponse, http } from 'msw';
 
 import { api, withLatency } from './utils';
 
 type LoginRequest = { email?: unknown; password?: unknown };
+
+function toSession(user: DemoUser): DemoSession {
+  return {
+    userId: user.id,
+    role: user.role,
+    displayName: user.displayName,
+    email: user.email,
+    ...(user.distributorId ? { distributorId: user.distributorId } : {}),
+    ...(user.commerceId ? { commerceId: user.commerceId } : {}),
+    ...(user.branchId ? { branchId: user.branchId } : {}),
+    ...(user.warehouseId ? { warehouseId: user.warehouseId } : {}),
+    ...(user.assignedRouteId ? { assignedRouteId: user.assignedRouteId } : {}),
+  };
+}
 
 export const authHandlers = [
   http.post(api('/auth/demo/login'), async ({ request }) => {
@@ -23,14 +37,7 @@ export const authHandlers = [
       );
     }
 
-    const session: DemoSession = {
-      userId: user.id,
-      role: user.role,
-      displayName: user.displayName,
-      email: user.email,
-      ...(user.commerceId ? { commerceId: user.commerceId } : {}),
-    };
-    return HttpResponse.json(session);
+    return HttpResponse.json(toSession(user));
   }),
 
   http.post(api('/auth/demo/logout'), async () => {
@@ -52,12 +59,6 @@ export const authHandlers = [
       );
     }
 
-    return HttpResponse.json({
-      userId: user.id,
-      role: user.role,
-      displayName: user.displayName,
-      email: user.email,
-      ...(user.commerceId ? { commerceId: user.commerceId } : {}),
-    } satisfies DemoSession);
+    return HttpResponse.json(toSession(user));
   }),
 ];

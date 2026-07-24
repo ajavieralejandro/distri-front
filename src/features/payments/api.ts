@@ -12,6 +12,7 @@ export type CreatePaymentBody = {
   commerceId: string;
   amount: string;
   method: PaymentMethod;
+  clientOperationId?: string;
 };
 
 export function fetchPayments(

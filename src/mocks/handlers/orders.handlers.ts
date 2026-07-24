@@ -1,10 +1,15 @@
 import { assertTransition } from '@/features/orders/lib/order-transitions';
 import { mutateDatabase } from '@/mocks/data/mock-database';
 import { multiplyMoney, sumMoney } from '@/shared/lib/decimal';
-import type { DemoDatabase, Order, OrderStatus } from '@/shared/types/demo';
+import type {
+  DemoDatabase,
+  Order,
+  OrderStatus,
+  PickItemStatus,
+} from '@/shared/types/demo';
 import { HttpResponse, http } from 'msw';
 
-import { api, withLatency } from './utils';
+import { api, appendAudit, withLatency } from './utils';
 
 type CreateOrderRequest = {
   commerceId?: unknown;
@@ -12,6 +17,16 @@ type CreateOrderRequest = {
 };
 
 type StatusRequest = { status?: unknown };
+type PrepareItemsRequest = {
+  items?: Array<{
+    productId?: unknown;
+    preparedQuantity?: unknown;
+    pickStatus?: unknown;
+    missingQuantity?: unknown;
+    itemNote?: unknown;
+    substituteProductId?: unknown;
+  }>;
+};
 
 type RequestedOrderItem = { productId?: unknown; quantity?: unknown };
 
@@ -22,10 +37,21 @@ function isOrderStatus(value: unknown): value is OrderStatus {
       'PENDING',
       'CONFIRMED',
       'PREPARING',
-      'SHIPPED',
+      'READY_FOR_DISPATCH',
+      'OUT_FOR_DELIVERY',
       'DELIVERED',
       'CANCELLED',
+      'DELIVERY_FAILED',
     ].includes(value)
+  );
+}
+
+function isPickStatus(value: unknown): value is PickItemStatus {
+  return (
+    value === 'PENDING' ||
+    value === 'PICKED' ||
+    value === 'MISSING' ||
+    value === 'SUBSTITUTED_DEMO'
   );
 }
 
@@ -47,7 +73,9 @@ function updateProductStock(database: DemoDatabase, productId: string): void {
 function releaseReservation(database: DemoDatabase, order: Order): void {
   for (const item of order.items) {
     const inventory = database.inventory.find(
-      (candidate) => candidate.productId === item.productId,
+      (candidate) =>
+        candidate.productId === item.productId &&
+        candidate.warehouseId === order.warehouseId,
     );
     if (inventory) {
       inventory.reservedStock -= item.quantity;
@@ -60,7 +88,9 @@ function releaseReservation(database: DemoDatabase, order: Order): void {
 function completeDelivery(database: DemoDatabase, order: Order): void {
   for (const item of order.items) {
     const inventory = database.inventory.find(
-      (candidate) => candidate.productId === item.productId,
+      (candidate) =>
+        candidate.productId === item.productId &&
+        candidate.warehouseId === order.warehouseId,
     );
     if (inventory) {
       inventory.reservedStock -= item.quantity;
@@ -76,11 +106,15 @@ export const orderHandlers = [
     const params = new URL(request.url).searchParams;
     const status = params.get('status');
     const commerceId = params.get('commerceId');
+    const warehouseId = params.get('warehouseId');
+    const routeId = params.get('routeId');
     const orders = mutateDatabase((database) =>
       database.orders.filter(
         (order) =>
           (!status || order.status === status) &&
-          (!commerceId || order.commerceId === commerceId),
+          (!commerceId || order.commerceId === commerceId) &&
+          (!warehouseId || order.warehouseId === warehouseId) &&
+          (!routeId || order.routeId === routeId),
       ),
     );
     return HttpResponse.json(orders);
@@ -134,7 +168,9 @@ export const orderHandlers = [
         }
         seenProductIds.add(requested.productId);
         const stock = database.inventory.find(
-          (item) => item.productId === requested.productId,
+          (item) =>
+            item.productId === requested.productId &&
+            item.warehouseId === 'wh-1',
         );
         if (!stock || stock.availableStock < requested.quantity) {
           return {
@@ -159,12 +195,17 @@ export const orderHandlers = [
           unitPrice: product.price,
           quantity,
           lineTotal: multiplyMoney(product.price, quantity),
+          preparedQuantity: 0,
+          pickStatus: 'PENDING' as const,
+          missingQuantity: 0,
         };
       });
 
       for (const item of items) {
         const stock = database.inventory.find(
-          (candidate) => candidate.productId === item.productId,
+          (candidate) =>
+            candidate.productId === item.productId &&
+            candidate.warehouseId === 'wh-1',
         )!;
         stock.reservedStock += item.quantity;
         stock.availableStock -= item.quantity;
@@ -177,13 +218,37 @@ export const orderHandlers = [
         id: `ord-${database.orderSequence - 1000}`,
         number: `PED-${database.orderSequence}`,
         commerceId,
+        branchId: database.branches.find(
+          (branch) => branch.commerceId === commerceId,
+        )?.id,
+        warehouseId: 'wh-1',
         status: 'PENDING',
+        priority: 'NORMAL',
         createdAt: timestamp,
         updatedAt: timestamp,
         items,
         subtotal: total,
         total,
-        history: [{ status: 'PENDING', at: timestamp, note: 'Pedido creado' }],
+        history: [
+          {
+            id: `ord-event-${database.orderSequence}`,
+            orderId: `ord-${database.orderSequence - 1000}`,
+            toStatus: 'PENDING',
+            userId: 'usr-sales',
+            userDisplayName: 'Ventas Demo',
+            createdAt: timestamp,
+            note: 'Pedido creado',
+          },
+        ],
+        deliveryAddress: database.commerces.find(
+          (commerce) => commerce.id === commerceId,
+        )!.address,
+        deliveryContactName: database.commerces.find(
+          (commerce) => commerce.id === commerceId,
+        )!.tradeName,
+        deliveryContactPhone: database.commerces.find(
+          (commerce) => commerce.id === commerceId,
+        )!.phone,
       };
       database.orderSequence += 1;
       database.orders.unshift(order);
@@ -223,6 +288,7 @@ export const orderHandlers = [
         };
       }
 
+      const previousStatus = order.status;
       if (nextStatus === 'CANCELLED') {
         releaseReservation(database, order);
       } else if (nextStatus === 'DELIVERED') {
@@ -231,13 +297,113 @@ export const orderHandlers = [
       order.status = nextStatus;
       order.updatedAt = new Date().toISOString();
       order.history.push({
-        status: nextStatus,
-        at: order.updatedAt,
+        id: `ord-event-${order.id}-${order.history.length + 1}`,
+        orderId: order.id,
+        fromStatus: previousStatus,
+        toStatus: nextStatus,
+        userId: 'usr-admin',
+        userDisplayName: 'Administrador Demo',
+        createdAt: order.updatedAt,
         note: `Pedido ${nextStatus.toLowerCase()}`,
+      });
+      appendAudit(database, {
+        userId: 'usr-admin',
+        userDisplayName: 'Administrador Demo',
+        action: 'ORDER_STATUS_CHANGED',
+        entityType: 'order',
+        entityId: order.id,
+        summary: `Pedido ${order.number}: ${previousStatus} a ${nextStatus}.`,
       });
       return { order };
     });
 
+    return 'error' in result
+      ? HttpResponse.json({ message: result.error }, { status: result.status })
+      : HttpResponse.json(result.order);
+  }),
+
+  http.patch(api('/orders/:id/prepare-items'), async ({ params, request }) => {
+    await withLatency();
+    const body = (await request.json()) as PrepareItemsRequest;
+    if (!Array.isArray(body.items)) {
+      return HttpResponse.json(
+        { message: 'Los ítems son obligatorios.' },
+        { status: 400 },
+      );
+    }
+    const result = mutateDatabase((database) => {
+      const order = database.orders.find(
+        (candidate) => candidate.id === params.id,
+      );
+      if (!order) return { error: 'Pedido no encontrado.', status: 404 };
+      for (const update of body.items!) {
+        const item = order.items.find(
+          (candidate) => candidate.productId === update.productId,
+        );
+        if (
+          !item ||
+          !isPickStatus(update.pickStatus) ||
+          typeof update.preparedQuantity !== 'number' ||
+          update.preparedQuantity < 0 ||
+          update.preparedQuantity > item.quantity
+        ) {
+          return { error: 'Datos de preparación inválidos.', status: 400 };
+        }
+        item.preparedQuantity = update.preparedQuantity;
+        item.pickStatus = update.pickStatus;
+        item.missingQuantity =
+          typeof update.missingQuantity === 'number'
+            ? update.missingQuantity
+            : 0;
+        if (typeof update.itemNote === 'string')
+          item.itemNote = update.itemNote;
+        if (typeof update.substituteProductId === 'string')
+          item.substituteProductId = update.substituteProductId;
+      }
+      order.updatedAt = new Date().toISOString();
+      return { order };
+    });
+    return 'error' in result
+      ? HttpResponse.json({ message: result.error }, { status: result.status })
+      : HttpResponse.json(result.order);
+  }),
+
+  http.post(api('/orders/:id/ready-for-dispatch'), async ({ params }) => {
+    await withLatency();
+    const result = mutateDatabase((database) => {
+      const order = database.orders.find(
+        (candidate) => candidate.id === params.id,
+      );
+      if (!order) return { error: 'Pedido no encontrado.', status: 404 };
+      if (order.items.some((item) => item.pickStatus === 'PENDING')) {
+        return {
+          error: 'Todos los ítems deben estar preparados.',
+          status: 400,
+        };
+      }
+      try {
+        assertTransition(order.status, 'READY_FOR_DISPATCH');
+      } catch (error) {
+        return {
+          error:
+            error instanceof Error ? error.message : 'Transición inválida.',
+          status: 400,
+        };
+      }
+      const timestamp = new Date().toISOString();
+      order.history.push({
+        id: `ord-event-${order.id}-${order.history.length + 1}`,
+        orderId: order.id,
+        fromStatus: order.status,
+        toStatus: 'READY_FOR_DISPATCH',
+        userId: 'usr-picker',
+        userDisplayName: 'Depósito Demo',
+        createdAt: timestamp,
+      });
+      order.status = 'READY_FOR_DISPATCH';
+      order.updatedAt = timestamp;
+      return { order };
+    });
     return 'error' in result
       ? HttpResponse.json({ message: result.error }, { status: result.status })
       : HttpResponse.json(result.order);

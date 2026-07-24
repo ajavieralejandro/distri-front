@@ -26,6 +26,7 @@ export function PaymentsPage() {
                   <th>Método</th>
                   <th>Estado</th>
                   <th>Importe</th>
+                  <th>Operación cliente</th>
                 </tr>
               </thead>
               <tbody>
@@ -35,6 +36,9 @@ export function PaymentsPage() {
                     <td>{paymentMethodLabels[p.method]}</td>
                     <td>{paymentStatusLabels[p.status]}</td>
                     <td>{formatMoney(p.amount)}</td>
+                    <td className="text-xs text-slate-500">
+                      {p.clientOperationId ?? '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
