@@ -1,0 +1,665 @@
+# Path Items for /orders* — provisional
+# $ref: ./paths/orders.yaml#/orders | #/orderById | #/orderStatus |
+#       #/orderPrepareItems | #/orderReadyForDispatch | #/orderDelivery
+
+orders:
+  get:
+    operationId: listOrders
+    summary: Listar pedidos
+    description: >
+      Lista pedidos del alcance del caller (distribuidor o comercio propio).
+      MSW demo responde un array bare con money como string y sin paginación.
+      Este contrato es la forma provisional objetivo (página + MoneyAmount).
+    tags: [Orders]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - DRIVER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/entities.yaml#/OrderStatus'
+      - name: commerceId
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/common.yaml#/OpaqueId'
+      - name: warehouseId
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/common.yaml#/OpaqueId'
+      - name: routeId
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/common.yaml#/OpaqueId'
+    responses:
+      '200':
+        description: Página de pedidos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/Order'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              pendingPage:
+                value:
+                  items:
+                    - id: ord-1001
+                      number: PED-1001
+                      commerceId: com-el-puente
+                      branchId: br-el-puente-1
+                      warehouseId: wh-1
+                      status: PENDING
+                      priority: NORMAL
+                      createdAt: '2026-07-25T09:15:00-03:00'
+                      updatedAt: '2026-07-25T09:15:00-03:00'
+                      items:
+                        - productId: prod-agua-15
+                          sku: BEB-001
+                          name: Agua mineral
+                          unitPrice:
+                            amount: '850.00'
+                            currency: ARS
+                          quantity: 24
+                          lineTotal:
+                            amount: '20400.00'
+                            currency: ARS
+                          preparedQuantity: 0
+                          pickStatus: PENDING
+                          missingQuantity: 0
+                      subtotal:
+                        amount: '20400.00'
+                        currency: ARS
+                      total:
+                        amount: '20400.00'
+                        currency: ARS
+                      history:
+                        - id: ord-event-1001-1
+                          orderId: ord-1001
+                          toStatus: PENDING
+                          userId: usr-sales
+                          userDisplayName: Ventas Demo
+                          createdAt: '2026-07-25T09:15:00-03:00'
+                          note: Pedido creado
+                      deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                      deliveryContactName: Almacén El Puente
+                      deliveryContactPhone: '+54 11 4567-8901'
+                  page: 0
+                  size: 20
+                  totalItems: 1
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+  post:
+    operationId: createOrder
+    summary: Crear pedido
+    description: >
+      Crea un pedido en estado PENDING y reserva stock.
+      Requiere encabezado Idempotency-Key. Body: commerceId + items
+      `[{productId, quantity}]`. MSW hoy no exige Idempotency-Key y usa
+      money string; el contrato provisional usa MoneyAmount en la respuesta.
+    tags: [Orders]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    parameters:
+      - $ref: '../parameters/common.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [commerceId, items]
+            additionalProperties: false
+            properties:
+              commerceId:
+                $ref: '../schemas/common.yaml#/OpaqueId'
+              notes:
+                type: string
+              items:
+                type: array
+                minItems: 1
+                items:
+                  type: object
+                  required: [productId, quantity]
+                  additionalProperties: false
+                  properties:
+                    productId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    quantity:
+                      type: integer
+                      minimum: 1
+          examples:
+            nuevoPedido:
+              value:
+                commerceId: com-el-puente
+                notes: Entregar antes del mediodía
+                items:
+                  - productId: prod-agua-15
+                    quantity: 24
+                  - productId: prod-gaseosa-cola
+                    quantity: 6
+    responses:
+      '201':
+        description: Pedido creado.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Order'
+            examples:
+              created:
+                value:
+                  id: ord-1002
+                  number: PED-1002
+                  commerceId: com-el-puente
+                  warehouseId: wh-1
+                  status: PENDING
+                  priority: NORMAL
+                  createdAt: '2026-07-25T10:02:00-03:00'
+                  updatedAt: '2026-07-25T10:02:00-03:00'
+                  notes: Entregar antes del mediodía
+                  items:
+                    - productId: prod-agua-15
+                      sku: BEB-001
+                      name: Agua mineral
+                      unitPrice:
+                        amount: '850.00'
+                        currency: ARS
+                      quantity: 24
+                      lineTotal:
+                        amount: '20400.00'
+                        currency: ARS
+                      preparedQuantity: 0
+                      pickStatus: PENDING
+                      missingQuantity: 0
+                  subtotal:
+                    amount: '20400.00'
+                    currency: ARS
+                  total:
+                    amount: '20400.00'
+                    currency: ARS
+                  history:
+                    - id: ord-event-1002-1
+                      orderId: ord-1002
+                      toStatus: PENDING
+                      userId: usr-sales
+                      userDisplayName: Ventas Demo
+                      createdAt: '2026-07-25T10:02:00-03:00'
+                      note: Pedido creado
+                  deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                  deliveryContactName: Almacén El Puente
+                  deliveryContactPhone: '+54 11 4567-8901'
+      '400':
+        $ref: '../responses/errors.yaml#/BadRequest'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '409':
+        $ref: '../responses/errors.yaml#/Conflict'
+      '422':
+        $ref: '../responses/errors.yaml#/UnprocessableEntity'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+orderById:
+  parameters:
+    - name: orderId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  get:
+    operationId: getOrderById
+    summary: Obtener pedido por ID
+    description: Detalle completo del pedido incluyendo ítems e historial.
+    tags: [Orders]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - DRIVER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    responses:
+      '200':
+        description: Pedido encontrado.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Order'
+            examples:
+              preparing:
+                value:
+                  id: ord-1001
+                  number: PED-1001
+                  commerceId: com-el-puente
+                  warehouseId: wh-1
+                  status: PREPARING
+                  priority: HIGH
+                  createdAt: '2026-07-25T09:15:00-03:00'
+                  updatedAt: '2026-07-25T11:20:00-03:00'
+                  items:
+                    - productId: prod-agua-15
+                      sku: BEB-001
+                      name: Agua mineral
+                      unitPrice:
+                        amount: '850.00'
+                        currency: ARS
+                      quantity: 24
+                      lineTotal:
+                        amount: '20400.00'
+                        currency: ARS
+                      preparedQuantity: 20
+                      pickStatus: PICKED
+                      missingQuantity: 4
+                      itemNote: Faltan 4 unidades en rack B
+                  subtotal:
+                    amount: '20400.00'
+                    currency: ARS
+                  total:
+                    amount: '20400.00'
+                    currency: ARS
+                  history:
+                    - id: ord-event-1001-1
+                      orderId: ord-1001
+                      toStatus: PENDING
+                      userId: usr-sales
+                      userDisplayName: Ventas Demo
+                      createdAt: '2026-07-25T09:15:00-03:00'
+                    - id: ord-event-1001-2
+                      orderId: ord-1001
+                      fromStatus: PENDING
+                      toStatus: CONFIRMED
+                      userId: usr-sales
+                      userDisplayName: Ventas Demo
+                      createdAt: '2026-07-25T09:40:00-03:00'
+                    - id: ord-event-1001-3
+                      orderId: ord-1001
+                      fromStatus: CONFIRMED
+                      toStatus: PREPARING
+                      userId: usr-picker
+                      userDisplayName: Depósito Demo
+                      createdAt: '2026-07-25T11:00:00-03:00'
+                  deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                  deliveryContactName: Almacén El Puente
+                  deliveryContactPhone: '+54 11 4567-8901'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+orderStatus:
+  parameters:
+    - name: orderId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  patch:
+    operationId: updateOrderStatus
+    summary: Actualizar estado del pedido
+    description: >
+      Cambia el estado del pedido respetando transiciones válidas.
+      Body: `{ status }`. Transiciones inválidas → 409 Conflict (provisional;
+      MSW hoy suele responder 400).
+    tags: [Orders]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - DRIVER
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            additionalProperties: false
+            properties:
+              status:
+                $ref: '../schemas/entities.yaml#/OrderStatus'
+          examples:
+            confirm:
+              value:
+                status: CONFIRMED
+            cancel:
+              value:
+                status: CANCELLED
+    responses:
+      '200':
+        description: Pedido actualizado.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Order'
+            examples:
+              confirmed:
+                value:
+                  id: ord-1001
+                  number: PED-1001
+                  commerceId: com-el-puente
+                  warehouseId: wh-1
+                  status: CONFIRMED
+                  priority: NORMAL
+                  createdAt: '2026-07-25T09:15:00-03:00'
+                  updatedAt: '2026-07-25T09:40:00-03:00'
+                  items: []
+                  subtotal:
+                    amount: '20400.00'
+                    currency: ARS
+                  total:
+                    amount: '20400.00'
+                    currency: ARS
+                  history: []
+                  deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                  deliveryContactName: Almacén El Puente
+                  deliveryContactPhone: '+54 11 4567-8901'
+      '400':
+        $ref: '../responses/errors.yaml#/BadRequest'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '409':
+        $ref: '../responses/errors.yaml#/Conflict'
+      '422':
+        $ref: '../responses/errors.yaml#/UnprocessableEntity'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+orderPrepareItems:
+  parameters:
+    - name: orderId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  patch:
+    operationId: prepareOrderItems
+    summary: Actualizar preparación de ítems
+    description: >
+      Actualiza cantidades preparadas y estado de picking por ítem.
+      Body: `{ items: [{ productId, preparedQuantity, pickStatus, ... }] }`.
+    tags: [Orders]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - WAREHOUSE_PICKER
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [items]
+            additionalProperties: false
+            properties:
+              items:
+                type: array
+                minItems: 1
+                items:
+                  type: object
+                  required: [productId, preparedQuantity, pickStatus]
+                  additionalProperties: false
+                  properties:
+                    productId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    preparedQuantity:
+                      type: integer
+                      minimum: 0
+                    pickStatus:
+                      $ref: '../schemas/entities.yaml#/PickItemStatus'
+                    missingQuantity:
+                      type: integer
+                      minimum: 0
+                    substituteProductId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    itemNote:
+                      type: string
+          examples:
+            pickPartial:
+              value:
+                items:
+                  - productId: prod-agua-15
+                    preparedQuantity: 20
+                    pickStatus: PICKED
+                    missingQuantity: 4
+                    itemNote: Faltan 4 en rack B
+                  - productId: prod-gaseosa-cola
+                    preparedQuantity: 6
+                    pickStatus: PICKED
+                    missingQuantity: 0
+    responses:
+      '200':
+        description: Ítems de preparación actualizados.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Order'
+      '400':
+        $ref: '../responses/errors.yaml#/BadRequest'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '409':
+        $ref: '../responses/errors.yaml#/Conflict'
+      '422':
+        $ref: '../responses/errors.yaml#/UnprocessableEntity'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+orderReadyForDispatch:
+  parameters:
+    - name: orderId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  post:
+    operationId: markOrderReadyForDispatch
+    summary: Marcar pedido listo para despacho
+    description: >
+      Transiciona el pedido a READY_FOR_DISPATCH cuando todos los ítems
+      dejaron de estar PENDING. Sin body.
+    tags: [Orders]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - WAREHOUSE_PICKER
+    responses:
+      '200':
+        description: Pedido listo para despacho.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Order'
+            examples:
+              ready:
+                value:
+                  id: ord-1001
+                  number: PED-1001
+                  commerceId: com-el-puente
+                  warehouseId: wh-1
+                  status: READY_FOR_DISPATCH
+                  priority: NORMAL
+                  createdAt: '2026-07-25T09:15:00-03:00'
+                  updatedAt: '2026-07-25T12:05:00-03:00'
+                  items: []
+                  subtotal:
+                    amount: '20400.00'
+                    currency: ARS
+                  total:
+                    amount: '20400.00'
+                    currency: ARS
+                  history: []
+                  deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                  deliveryContactName: Almacén El Puente
+                  deliveryContactPhone: '+54 11 4567-8901'
+      '400':
+        $ref: '../responses/errors.yaml#/BadRequest'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '409':
+        $ref: '../responses/errors.yaml#/Conflict'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+orderDelivery:
+  parameters:
+    - name: orderId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  patch:
+    operationId: reportOrderDelivery
+    summary: Reportar resultado de entrega
+    description: >
+      Registra el resultado de la entrega en ruta.
+      Body: `{ result, observation?, receivedByName? }`.
+      Resultados exitosos (`DELIVERED_OK`, `PARTIAL_DEMO`) → DELIVERED;
+      el resto → DELIVERY_FAILED.
+    tags: [Orders]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - DRIVER
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [result]
+            additionalProperties: false
+            properties:
+              result:
+                $ref: '../schemas/entities.yaml#/DeliveryResult'
+              observation:
+                type: string
+              receivedByName:
+                type: string
+          examples:
+            deliveredOk:
+              value:
+                result: DELIVERED_OK
+                receivedByName: María López
+                observation: Entregado en mostrador
+            customerAbsent:
+              value:
+                result: CUSTOMER_ABSENT
+                observation: Nadie atendió en el local a las 14:30
+    responses:
+      '200':
+        description: Resultado de entrega registrado.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Order'
+            examples:
+              delivered:
+                value:
+                  id: ord-1001
+                  number: PED-1001
+                  commerceId: com-el-puente
+                  warehouseId: wh-1
+                  routeId: route-norte
+                  status: DELIVERED
+                  priority: NORMAL
+                  createdAt: '2026-07-25T09:15:00-03:00'
+                  updatedAt: '2026-07-25T14:35:00-03:00'
+                  items: []
+                  subtotal:
+                    amount: '20400.00'
+                    currency: ARS
+                  total:
+                    amount: '20400.00'
+                    currency: ARS
+                  history: []
+                  deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                  deliveryContactName: Almacén El Puente
+                  deliveryContactPhone: '+54 11 4567-8901'
+                  deliveryResult: DELIVERED_OK
+                  deliveryObservation: Entregado en mostrador
+                  receivedByName: María López
+      '400':
+        $ref: '../responses/errors.yaml#/BadRequest'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '409':
+        $ref: '../responses/errors.yaml#/Conflict'
+      '422':
+        $ref: '../responses/errors.yaml#/UnprocessableEntity'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

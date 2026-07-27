@@ -1,30 +1,49 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+
 import { useCustomersQuery } from '@/features/customers/hooks';
-import { formatMoney } from '@/shared/lib/money';
-import { QueryState } from '@/shared/components/QueryState';
 import { PageHeader } from '@/shared/components/PageHeader';
+import { QueryState } from '@/shared/components/QueryState';
+import { StatusBadge } from '@/shared/components/StatusBadge';
+import { compareMoney } from '@/shared/lib/decimal';
+import { formatMoney } from '@/shared/lib/money';
 
 export function CustomersPage() {
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const query = useCustomersQuery({ search, status: status || undefined });
+  const [params, setParams] = useSearchParams();
+  const [search, setSearch] = useState(params.get('search') ?? '');
+  const [status, setStatus] = useState(params.get('status') ?? '');
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (search) next.set('search', search);
+    if (status) next.set('status', status);
+    setParams(next, { replace: true });
+  }, [search, status, setParams]);
+
+  const query = useCustomersQuery({
+    search: search || undefined,
+    status: status || undefined,
+  });
+
   return (
     <>
-      <PageHeader title="Clientes" description="Comercios registrados." />
-      <div className="mb-4 flex gap-3">
+      <PageHeader
+        title="Clientes"
+        description="Comercios clientes (empresas). No confundir con depósitos de la distribuidora ni con sucursales del comercio."
+      />
+      <div className="mb-4 flex flex-wrap gap-3">
         <input
           aria-label="Buscar comercios"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="rounded border p-2"
+          onChange={(event) => setSearch(event.target.value)}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
           placeholder="Buscar"
         />
         <select
           aria-label="Estado"
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="rounded border p-2"
+          onChange={(event) => setStatus(event.target.value)}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
         >
           <option value="">Todos</option>
           <option value="ACTIVE">Activos</option>
@@ -40,25 +59,47 @@ export function CustomersPage() {
           <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b">
+                <tr className="border-b border-slate-200 text-slate-600">
                   <th className="p-3">Comercio</th>
-                  <th>Estado</th>
-                  <th>Saldo</th>
+                  <th className="p-3">Estado</th>
+                  <th className="p-3">Saldo</th>
+                  <th className="p-3">Crédito</th>
                 </tr>
               </thead>
               <tbody>
-                {query.data.map((c) => (
-                  <tr key={c.id} className="border-b">
+                {query.data.map((commerce) => (
+                  <tr key={commerce.id} className="border-b border-slate-100">
                     <td className="p-3">
                       <Link
                         className="text-teal-800 underline"
-                        to={`/admin/customers/${c.id}`}
+                        to={`/admin/customers/${commerce.id}`}
                       >
-                        {c.tradeName}
+                        {commerce.tradeName}
                       </Link>
+                      <p className="text-xs text-slate-500">
+                        {commerce.businessName}
+                      </p>
                     </td>
-                    <td>{c.status}</td>
-                    <td>{formatMoney(c.balance)}</td>
+                    <td className="p-3">
+                      <StatusBadge
+                        label={
+                          commerce.status === 'ACTIVE' ? 'Activo' : 'Inactivo'
+                        }
+                        tone={
+                          commerce.status === 'ACTIVE' ? 'success' : 'neutral'
+                        }
+                      />
+                    </td>
+                    <td className="p-3">{formatMoney(commerce.balance)}</td>
+                    <td className="p-3">
+                      {formatMoney(commerce.creditLimit)}
+                      {compareMoney(commerce.balance, commerce.creditLimit) >
+                      0 ? (
+                        <span className="ml-2 text-xs text-red-700">
+                          Excedido
+                        </span>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

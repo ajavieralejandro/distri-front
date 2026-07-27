@@ -230,7 +230,7 @@ const commerces: Commerce[] = [
     taxId: '20-00000003-5',
     status: 'ACTIVE',
     paymentTerms: 'Pago contra entrega',
-    creditLimit: '250000.00',
+    creditLimit: '50000.00',
     balance: '78400.00',
     email: 'admin@laesquina.demo',
     phone: '+54 11 4000-1003',
@@ -387,7 +387,7 @@ const orders: Order[] = [
     stopSequence: 1,
     priority: 'HIGH',
   }),
-  order('ord-3', 'PED-1003', 'com-3', 'CANCELLED', 10, [5, 8], {
+  order('ord-3', 'PED-1003', 'com-3', 'DELIVERY_FAILED', 10, [5, 8], {
     warehouseId: 'wh-1',
     priority: 'NORMAL',
   }),
@@ -455,7 +455,7 @@ const accountMovements: AccountMovement[] = [
     dueDate: iso(18),
     createdAt: iso(12),
     reference: 'PED-1002',
-    status: 'OPEN',
+    status: 'OVERDUE',
   },
   {
     id: 'acc-4',

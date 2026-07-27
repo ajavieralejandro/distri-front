@@ -1,7 +1,9 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+import { Can } from '@/features/auth/Can';
 import {
   stockAdjustSchema,
   useAdjustInventoryMutation,
@@ -9,17 +11,31 @@ import {
   type StockAdjustFormValues,
 } from '@/features/inventory/hooks';
 import { useProductsQuery } from '@/features/products/hooks';
-import type { InventoryItem } from '@/shared/types/demo';
 import { Modal } from '@/shared/components/Modal';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { QueryState } from '@/shared/components/QueryState';
-import { Can } from '@/features/auth/Can';
+import type { InventoryItem } from '@/shared/types/demo';
+
+const WAREHOUSE_NAMES: Record<string, string> = {
+  'wh-1': 'Depósito Central',
+  'wh-2': 'Depósito Norte',
+};
 
 export function InventoryPage() {
-  const [search, setSearch] = useState('');
-  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const [search, setSearch] = useState(params.get('search') ?? '');
+  const [lowStockOnly, setLowStockOnly] = useState(
+    params.get('lowStock') === '1',
+  );
   const [selected, setSelected] = useState<InventoryItem | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (search) next.set('search', search);
+    if (lowStockOnly) next.set('lowStock', '1');
+    setParams(next, { replace: true });
+  }, [search, lowStockOnly, setParams]);
 
   const inventoryQuery = useInventoryQuery({
     search: search || undefined,
@@ -35,6 +51,18 @@ export function InventoryPage() {
     }
     return map;
   }, [productsQuery.data]);
+
+  const summary = useMemo(() => {
+    const items = inventoryQuery.data ?? [];
+    const critical = items.filter(
+      (item) =>
+        item.availableStock > 0 &&
+        item.availableStock <= item.lowStockThreshold,
+    ).length;
+    const empty = items.filter((item) => item.availableStock <= 0).length;
+    const reserved = items.reduce((sum, item) => sum + item.reservedStock, 0);
+    return { critical, empty, reserved, total: items.length };
+  }, [inventoryQuery.data]);
 
   const form = useForm<StockAdjustFormValues>({
     resolver: zodResolver(stockAdjustSchema),
@@ -71,8 +99,22 @@ export function InventoryPage() {
     <section>
       <PageHeader
         title="Inventario"
-        description="Stock físico, reservado y disponible por depósito. Los ajustes son simulados."
+        description="Stock físico, reservado y disponible por depósito. Los ajustes se centralizan como movimientos simulados."
       />
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+        {[
+          ['Ítems listados', summary.total],
+          ['Stock crítico', summary.critical],
+          ['Sin stock', summary.empty],
+          ['Unidades reservadas', summary.reserved],
+        ].map(([label, value]) => (
+          <div key={String(label)} className="rounded-lg bg-white p-3 shadow-sm">
+            <p className="text-xs text-slate-500">{label}</p>
+            <p className="text-xl font-semibold">{value}</p>
+          </div>
+        ))}
+      </div>
 
       {successMessage ? (
         <p className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
@@ -94,8 +136,14 @@ export function InventoryPage() {
             checked={lowStockOnly}
             onChange={(event) => setLowStockOnly(event.target.checked)}
           />
-          Solo stock bajo
+          Solo stock bajo / crítico
         </label>
+        <Link
+          to="/admin/alerts"
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm text-teal-900"
+        >
+          Ver alertas de stock
+        </Link>
       </div>
 
       <QueryState
@@ -113,6 +161,7 @@ export function InventoryPage() {
                   <th className="p-3">Físico</th>
                   <th className="p-3">Reservado</th>
                   <th className="p-3">Disponible</th>
+                  <th className="p-3">Mínimo</th>
                   <th className="p-3">Acciones</th>
                 </tr>
               </thead>
@@ -125,11 +174,15 @@ export function InventoryPage() {
                         {productNameById.get(item.productId) ?? item.productId}
                         {isLow ? (
                           <span className="ml-2 text-amber-700">
-                            Stock bajo
+                            {item.availableStock <= 0
+                              ? 'Sin stock'
+                              : 'Stock bajo'}
                           </span>
                         ) : null}
                       </td>
-                      <td className="p-3">{item.warehouseId}</td>
+                      <td className="p-3">
+                        {WAREHOUSE_NAMES[item.warehouseId] ?? item.warehouseId}
+                      </td>
                       <td className="p-3">{item.physicalStock}</td>
                       <td className="p-3">{item.reservedStock}</td>
                       <td
@@ -137,6 +190,7 @@ export function InventoryPage() {
                       >
                         {item.availableStock}
                       </td>
+                      <td className="p-3">{item.lowStockThreshold}</td>
                       <td className="p-3">
                         <Can permission="inventory:adjust">
                           <button

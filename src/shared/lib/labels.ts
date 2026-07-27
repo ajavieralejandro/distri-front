@@ -1,3 +1,4 @@
+import { ORDER_STATUS_LABELS } from '@/features/orders/lib/order-status';
 import type {
   AccountMovementType,
   DeliveryResult,
@@ -9,16 +10,7 @@ import type {
   PickItemStatus,
 } from '@/shared/types/demo';
 
-export const orderStatusLabels: Record<OrderStatus, string> = {
-  PENDING: 'Pendiente',
-  CONFIRMED: 'Confirmado',
-  PREPARING: 'Preparando',
-  READY_FOR_DISPATCH: 'Listo para despacho',
-  OUT_FOR_DELIVERY: 'En reparto',
-  DELIVERED: 'Entregado',
-  CANCELLED: 'Cancelado',
-  DELIVERY_FAILED: 'Entrega fallida',
-};
+export const orderStatusLabels: Record<OrderStatus, string> = ORDER_STATUS_LABELS;
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
   CASH: 'Efectivo',

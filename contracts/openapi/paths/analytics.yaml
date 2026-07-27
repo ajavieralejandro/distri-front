@@ -1,0 +1,243 @@
+# Path Items for analytics + admin dashboard — provisional
+# $ref: ./paths/analytics.yaml#/analyticsAdmin | #/analyticsCommerce | #/adminDashboard
+
+analyticsAdmin:
+  get:
+    operationId: getAdminAnalytics
+    summary: Analytics global del distribuidor
+    description: >
+      Totales agregados para el panel admin. MSW hoy usa strings para contadores
+      e importes; el contrato provisional tipa contadores como integer y montos
+      como MoneyAmount ARS.
+    tags: [Analytics]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+    responses:
+      '200':
+        description: Analytics admin.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [totals]
+              additionalProperties: false
+              properties:
+                totals:
+                  type: object
+                  required:
+                    - orders
+                    - deliveredOrders
+                    - orderValue
+                    - payments
+                    - availableStock
+                  additionalProperties: false
+                  properties:
+                    orders:
+                      type: integer
+                      minimum: 0
+                    deliveredOrders:
+                      type: integer
+                      minimum: 0
+                    orderValue:
+                      $ref: '../schemas/common.yaml#/MoneyAmount'
+                    payments:
+                      $ref: '../schemas/common.yaml#/MoneyAmount'
+                    availableStock:
+                      type: integer
+                      minimum: 0
+            examples:
+              adminTotals:
+                value:
+                  totals:
+                    orders: 42
+                    deliveredOrders: 28
+                    orderValue:
+                      amount: '1850400.50'
+                      currency: ARS
+                    payments:
+                      amount: '920000.00'
+                      currency: ARS
+                    availableStock: 1840
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+analyticsCommerce:
+  parameters:
+    - name: commerceId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  get:
+    operationId: getCommerceAnalytics
+    summary: Analytics de un comercio
+    description: >
+      Totales agregados filtrados por comercio. Alcance propio para
+      COMMERCE_OWNER; global para roles de distribuidor.
+    tags: [Analytics]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - COMMERCE_OWNER
+    responses:
+      '200':
+        description: Analytics del comercio.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commerceId, totals]
+              additionalProperties: false
+              properties:
+                commerceId:
+                  $ref: '../schemas/common.yaml#/OpaqueId'
+                totals:
+                  type: object
+                  required:
+                    - orders
+                    - deliveredOrders
+                    - orderValue
+                    - payments
+                    - availableStock
+                  additionalProperties: false
+                  properties:
+                    orders:
+                      type: integer
+                      minimum: 0
+                    deliveredOrders:
+                      type: integer
+                      minimum: 0
+                    orderValue:
+                      $ref: '../schemas/common.yaml#/MoneyAmount'
+                    payments:
+                      $ref: '../schemas/common.yaml#/MoneyAmount'
+                    availableStock:
+                      type: integer
+                      minimum: 0
+            examples:
+              elPuente:
+                value:
+                  commerceId: com-el-puente
+                  totals:
+                    orders: 12
+                    deliveredOrders: 9
+                    orderValue:
+                      amount: '245800.00'
+                      currency: ARS
+                    payments:
+                      amount: '158300.50'
+                      currency: ARS
+                    availableStock: 1840
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+adminDashboard:
+  get:
+    operationId: getAdminDashboard
+    summary: Dashboard operativo admin
+    description: >
+      Resumen operativo: pedidos pendientes/preparación, productos en stock bajo,
+      saldo pendiente y pedidos recientes. MSW usa money string en
+      `totalOutstandingBalance`; el contrato provisional usa MoneyAmount.
+    tags: [Analytics]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+    responses:
+      '200':
+        description: Datos del dashboard.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pendingOrders
+                - preparingOrders
+                - lowStockProducts
+                - totalOutstandingBalance
+                - recentOrders
+              additionalProperties: false
+              properties:
+                pendingOrders:
+                  type: integer
+                  minimum: 0
+                preparingOrders:
+                  type: integer
+                  minimum: 0
+                lowStockProducts:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/Product'
+                totalOutstandingBalance:
+                  $ref: '../schemas/common.yaml#/MoneyAmount'
+                recentOrders:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/Order'
+            examples:
+              dashboard:
+                value:
+                  pendingOrders: 5
+                  preparingOrders: 3
+                  lowStockProducts:
+                    - id: prod-gaseosa-cola
+                      sku: BEB-014
+                      name: Gaseosa cola
+                      description: Pack x6 de 2.25 L
+                      categoryId: cat-bebidas
+                      unit: PACK
+                      presentation: Pack x6 2.25 L
+                      price:
+                        amount: '12500.50'
+                        currency: ARS
+                      availableStock: 12
+                      active: true
+                  totalOutstandingBalance:
+                    amount: '312450.75'
+                    currency: ARS
+                  recentOrders:
+                    - id: ord-1001
+                      number: PED-1001
+                      commerceId: com-el-puente
+                      warehouseId: wh-1
+                      status: PENDING
+                      priority: NORMAL
+                      createdAt: '2026-07-25T09:15:00-03:00'
+                      updatedAt: '2026-07-25T09:15:00-03:00'
+                      items: []
+                      subtotal:
+                        amount: '20400.00'
+                        currency: ARS
+                      total:
+                        amount: '20400.00'
+                        currency: ARS
+                      history: []
+                      deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                      deliveryContactName: Almacén El Puente
+                      deliveryContactPhone: '+54 11 4567-8901'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

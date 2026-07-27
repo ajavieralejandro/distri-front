@@ -1,0 +1,199 @@
+# Path Items for /auth/* — provisional
+# $ref from main: ./paths/auth.yaml#/login | #/refresh | #/logout | #/me
+
+login:
+  post:
+    operationId: login
+    summary: Iniciar sesión
+    description: >
+      Autentica con email y contraseña y devuelve un par de tokens más el usuario actual.
+      Reemplaza el endpoint demo `POST /auth/demo/login`, que hoy responde solo con
+      una sesión en memoria (sin JWT). Formato exacto del token: pendiente
+      (ver decisions/authentication.md).
+    tags: [Authentication]
+    security: []
+    x-contract-status: provisional
+    x-allowed-roles: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [email, password]
+            additionalProperties: false
+            properties:
+              email:
+                type: string
+                format: email
+              password:
+                type: string
+                format: password
+                minLength: 1
+          examples:
+            adminDemo:
+              summary: Administrador distribuidor (ficticio)
+              value:
+                email: admin@demo.distrisoft.local
+                password: demo1234
+    responses:
+      '200':
+        description: Autenticación exitosa.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tokens, user]
+              additionalProperties: false
+              properties:
+                tokens:
+                  $ref: '../schemas/entities.yaml#/TokenPair'
+                user:
+                  $ref: '../schemas/entities.yaml#/CurrentUser'
+            examples:
+              adminSession:
+                summary: Sesión de administrador
+                value:
+                  tokens:
+                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo-access
+                    refreshToken: opaque-refresh-token-demo
+                    tokenType: Bearer
+                    expiresIn: 3600
+                  user:
+                    userId: usr-admin
+                    role: DISTRIBUTOR_ADMIN
+                    displayName: Administrador Demo
+                    email: admin@demo.distrisoft.local
+                    distributorId: dist-1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '422':
+        $ref: '../responses/errors.yaml#/UnprocessableEntity'
+      '429':
+        $ref: '../responses/errors.yaml#/TooManyRequests'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+refresh:
+  post:
+    operationId: refreshTokens
+    summary: Renovar tokens
+    description: >
+      Intercambia un refresh token válido por un nuevo TokenPair.
+      No existe en la demo MSW; es parte del contrato provisional para SPA.
+    tags: [Authentication]
+    security: []
+    x-contract-status: provisional
+    x-allowed-roles: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [refreshToken]
+            additionalProperties: false
+            properties:
+              refreshToken:
+                type: string
+                minLength: 1
+          examples:
+            refresh:
+              value:
+                refreshToken: opaque-refresh-token-demo
+    responses:
+      '200':
+        description: Tokens renovados.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/TokenPair'
+            examples:
+              renewed:
+                value:
+                  accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo-access-2
+                  refreshToken: opaque-refresh-token-demo-rotated
+                  tokenType: Bearer
+                  expiresIn: 3600
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '422':
+        $ref: '../responses/errors.yaml#/UnprocessableEntity'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+logout:
+  post:
+    operationId: logout
+    summary: Cerrar sesión
+    description: >
+      Invalida el access/refresh token del servidor. La demo MSW responde 204
+      sin invalidación real (`POST /auth/demo/logout`).
+    tags: [Authentication]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - CASHIER
+      - DRIVER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    responses:
+      '204':
+        description: Sesión cerrada.
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+me:
+  get:
+    operationId: getAuthMe
+    summary: Usuario autenticado
+    description: >
+      Devuelve la identidad y alcance del caller según el token Bearer.
+      Sustituye `GET /auth/demo/session?userId=...` de la demo.
+    tags: [Authentication]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - CASHIER
+      - DRIVER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    responses:
+      '200':
+        description: Usuario actual.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/CurrentUser'
+            examples:
+              salesUser:
+                value:
+                  userId: usr-sales
+                  role: SALES
+                  displayName: Ventas Demo
+                  email: ventas@demo.distrisoft.local
+                  distributorId: dist-1
+              commerceOwner:
+                value:
+                  userId: usr-commerce-owner
+                  role: COMMERCE_OWNER
+                  displayName: Dueño Comercio Demo
+                  email: comercio@demo.distrisoft.local
+                  distributorId: dist-1
+                  commerceId: com-el-puente
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

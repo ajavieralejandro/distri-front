@@ -1,0 +1,14 @@
+extends:
+  - recommended
+
+apis:
+  distrisoft@provisional:
+    root: ./openapi/distrisoft-api.yaml
+
+rules:
+  operation-operationId: error
+  operation-summary: error
+  no-unresolved-refs: error
+  info-license: off
+  tag-description: off
+  operation-4xx-response: warn

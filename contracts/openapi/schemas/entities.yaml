@@ -1,0 +1,574 @@
+# Domain enums and core entities — provisional
+# Derived from src/shared/types/demo.ts and MSW handlers.
+
+DemoRole:
+  type: string
+  enum:
+    - DISTRIBUTOR_ADMIN
+    - SALES
+    - WAREHOUSE_PICKER
+    - CASHIER
+    - DRIVER
+    - COMMERCE_OWNER
+    - COMMERCE_BUYER
+    - COMMERCE_CASHIER
+  description: >
+    Roles used by the demo UX. Backend will enforce authorization;
+    the UI only adapts navigation and visible actions.
+
+OrderStatus:
+  type: string
+  enum:
+    - PENDING
+    - CONFIRMED
+    - PREPARING
+    - READY_FOR_DISPATCH
+    - OUT_FOR_DELIVERY
+    - DELIVERED
+    - CANCELLED
+    - DELIVERY_FAILED
+
+PickItemStatus:
+  type: string
+  enum: [PENDING, PICKED, MISSING, SUBSTITUTED_DEMO]
+
+PaymentMethod:
+  type: string
+  enum: [CASH, TRANSFER, CARD, MERCADO_PAGO_DEMO]
+
+PaymentStatus:
+  type: string
+  enum: [PENDING, COMPLETED, FAILED]
+
+DeliveryResult:
+  type: string
+  enum:
+    - DELIVERED_OK
+    - CUSTOMER_ABSENT
+    - WRONG_ADDRESS
+    - REJECTED
+    - PARTIAL_DEMO
+
+InvoiceStatus:
+  type: string
+  enum: [DRAFT, ISSUED_DEMO, CANCELLED_DEMO]
+  description: Demo invoices have NO fiscal validity (ARCA).
+
+Commerce:
+  type: object
+  required:
+    - id
+    - businessName
+    - tradeName
+    - taxId
+    - status
+    - creditLimit
+    - balance
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    businessName:
+      type: string
+      example: Almacén Los Andes S.R.L.
+    tradeName:
+      type: string
+      example: Los Andes
+    taxId:
+      type: string
+      example: 30-71234567-8
+    status:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+    paymentTerms:
+      type: string
+      example: Cuenta corriente 30 días
+    creditLimit:
+      $ref: './common.yaml#/MoneyAmount'
+    balance:
+      $ref: './common.yaml#/MoneyAmount'
+    email:
+      type: string
+      format: email
+    phone:
+      type: string
+    address:
+      type: string
+
+Product:
+  type: object
+  required: [id, sku, name, categoryId, unit, price, availableStock, active]
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    sku:
+      type: string
+      example: BEB-001
+    name:
+      type: string
+      example: Agua mineral
+    description:
+      type: string
+    categoryId:
+      $ref: './common.yaml#/OpaqueId'
+    unit:
+      type: string
+      enum: [UNIT, PACK, BOX]
+    presentation:
+      type: string
+      example: Botella 1.5 L
+    price:
+      $ref: './common.yaml#/MoneyAmount'
+    availableStock:
+      type: integer
+      minimum: 0
+    active:
+      type: boolean
+
+Category:
+  type: object
+  required: [id, name]
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    name:
+      type: string
+      example: Bebidas
+
+OrderItem:
+  type: object
+  required:
+    - productId
+    - sku
+    - name
+    - unitPrice
+    - quantity
+    - lineTotal
+    - preparedQuantity
+    - pickStatus
+  properties:
+    productId:
+      $ref: './common.yaml#/OpaqueId'
+    sku:
+      type: string
+    name:
+      type: string
+    unitPrice:
+      $ref: './common.yaml#/MoneyAmount'
+    quantity:
+      type: integer
+      minimum: 1
+    lineTotal:
+      $ref: './common.yaml#/MoneyAmount'
+    preparedQuantity:
+      type: integer
+      minimum: 0
+    pickStatus:
+      $ref: '#/PickItemStatus'
+    missingQuantity:
+      type: integer
+      minimum: 0
+    substituteProductId:
+      $ref: './common.yaml#/OpaqueId'
+    itemNote:
+      type: string
+
+OrderStatusEvent:
+  type: object
+  required: [id, orderId, toStatus, userId, userDisplayName, createdAt]
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    orderId:
+      $ref: './common.yaml#/OpaqueId'
+    fromStatus:
+      $ref: '#/OrderStatus'
+    toStatus:
+      $ref: '#/OrderStatus'
+    userId:
+      $ref: './common.yaml#/OpaqueId'
+    userDisplayName:
+      type: string
+    createdAt:
+      $ref: './common.yaml#/IsoDateTime'
+    note:
+      type: string
+
+Order:
+  type: object
+  required:
+    - id
+    - number
+    - commerceId
+    - warehouseId
+    - status
+    - priority
+    - createdAt
+    - updatedAt
+    - items
+    - subtotal
+    - total
+    - history
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    number:
+      type: string
+      example: PED-1001
+    commerceId:
+      $ref: './common.yaml#/OpaqueId'
+    branchId:
+      $ref: './common.yaml#/OpaqueId'
+    warehouseId:
+      $ref: './common.yaml#/OpaqueId'
+    routeId:
+      $ref: './common.yaml#/OpaqueId'
+    status:
+      $ref: '#/OrderStatus'
+    priority:
+      type: string
+      enum: [NORMAL, HIGH]
+    createdAt:
+      $ref: './common.yaml#/IsoDateTime'
+    updatedAt:
+      $ref: './common.yaml#/IsoDateTime'
+    items:
+      type: array
+      items:
+        $ref: '#/OrderItem'
+    subtotal:
+      $ref: './common.yaml#/MoneyAmount'
+    total:
+      $ref: './common.yaml#/MoneyAmount'
+    notes:
+      type: string
+    history:
+      type: array
+      items:
+        $ref: '#/OrderStatusEvent'
+    deliveryAddress:
+      type: string
+    deliveryContactName:
+      type: string
+    deliveryContactPhone:
+      type: string
+    deliveryWindow:
+      type: string
+    stopSequence:
+      type: integer
+    deliveryResult:
+      $ref: '#/DeliveryResult'
+    deliveryObservation:
+      type: string
+    receivedByName:
+      type: string
+
+Payment:
+  type: object
+  required: [id, commerceId, amount, method, status, createdAt, simulated]
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    commerceId:
+      $ref: './common.yaml#/OpaqueId'
+    amount:
+      $ref: './common.yaml#/MoneyAmount'
+    method:
+      $ref: '#/PaymentMethod'
+    status:
+      $ref: '#/PaymentStatus'
+    createdAt:
+      $ref: './common.yaml#/IsoDateTime'
+    reference:
+      type: string
+    simulated:
+      type: boolean
+      const: true
+    clientOperationId:
+      type: string
+      deprecated: true
+      description: Demo field. Prefer Idempotency-Key header.
+    recordedByUserId:
+      $ref: './common.yaml#/OpaqueId'
+
+Invoice:
+  type: object
+  required:
+    - id
+    - number
+    - commerceId
+    - orderId
+    - status
+    - subtotal
+    - tax
+    - total
+    - items
+    - disclaimer
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    number:
+      type: string
+      example: DEMO-FC-000001
+    commerceId:
+      $ref: './common.yaml#/OpaqueId'
+    orderId:
+      $ref: './common.yaml#/OpaqueId'
+    issuedAt:
+      $ref: './common.yaml#/IsoDateTime'
+    dueAt:
+      $ref: './common.yaml#/IsoDateTime'
+    status:
+      $ref: '#/InvoiceStatus'
+    subtotal:
+      $ref: './common.yaml#/MoneyAmount'
+    tax:
+      $ref: './common.yaml#/MoneyAmount'
+    total:
+      $ref: './common.yaml#/MoneyAmount'
+    items:
+      type: array
+      items:
+        $ref: '#/OrderItem'
+    disclaimer:
+      type: string
+      example: DOCUMENTO DEMOSTRATIVO — SIN VALIDEZ FISCAL — NO AUTORIZADO POR ARCA
+
+Receipt:
+  type: object
+  required:
+    - id
+    - number
+    - commerceId
+    - paymentId
+    - issuedAt
+    - amount
+    - paymentMethod
+    - disclaimer
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    number:
+      type: string
+      example: DEMO-RC-000001
+    commerceId:
+      $ref: './common.yaml#/OpaqueId'
+    paymentId:
+      $ref: './common.yaml#/OpaqueId'
+    issuedAt:
+      $ref: './common.yaml#/IsoDateTime'
+    amount:
+      $ref: './common.yaml#/MoneyAmount'
+    paymentMethod:
+      $ref: '#/PaymentMethod'
+    allocations:
+      type: array
+      items:
+        type: object
+        required: [description, amount]
+        properties:
+          invoiceId:
+            $ref: './common.yaml#/OpaqueId'
+          description:
+            type: string
+          amount:
+            $ref: './common.yaml#/MoneyAmount'
+    disclaimer:
+      type: string
+      example: RECIBO DEMOSTRATIVO — SIN VALIDEZ FISCAL
+
+CurrentUser:
+  type: object
+  required: [userId, role, displayName, email]
+  properties:
+    userId:
+      $ref: './common.yaml#/OpaqueId'
+    role:
+      $ref: '#/DemoRole'
+    displayName:
+      type: string
+    email:
+      type: string
+      format: email
+    distributorId:
+      $ref: './common.yaml#/OpaqueId'
+    commerceId:
+      $ref: './common.yaml#/OpaqueId'
+    branchId:
+      $ref: './common.yaml#/OpaqueId'
+    warehouseId:
+      $ref: './common.yaml#/OpaqueId'
+    assignedRouteId:
+      $ref: './common.yaml#/OpaqueId'
+
+TokenPair:
+  type: object
+  required: [accessToken, tokenType, expiresIn]
+  properties:
+    accessToken:
+      type: string
+      description: Provisional bearer token. Format TBD (see decisions/authentication.md).
+    refreshToken:
+      type: string
+    tokenType:
+      type: string
+      example: Bearer
+    expiresIn:
+      type: integer
+      description: Seconds until access token expiry.
+      example: 3600
+  x-contract-status: provisional
+
+HealthResponse:
+  type: object
+  required: [status, service, timestamp]
+  properties:
+    status:
+      type: string
+      example: ok
+    service:
+      type: string
+      example: distrisoft-api
+    timestamp:
+      $ref: './common.yaml#/IsoDateTime'
+
+InventoryItem:
+  type: object
+  required:
+    - id
+    - productId
+    - warehouseId
+    - physicalStock
+    - reservedStock
+    - availableStock
+    - lowStockThreshold
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    productId:
+      $ref: './common.yaml#/OpaqueId'
+    warehouseId:
+      $ref: './common.yaml#/OpaqueId'
+    physicalStock:
+      type: integer
+    reservedStock:
+      type: integer
+    availableStock:
+      type: integer
+    lowStockThreshold:
+      type: integer
+
+DeliveryRoute:
+  type: object
+  required: [id, name, driverUserId, vehicleId, status]
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    name:
+      type: string
+    driverUserId:
+      $ref: './common.yaml#/OpaqueId'
+    vehicleId:
+      $ref: './common.yaml#/OpaqueId'
+    status:
+      type: string
+      enum: [PLANNED, IN_PROGRESS, COMPLETED]
+    startedAt:
+      $ref: './common.yaml#/IsoDateTime'
+
+AccountSummary:
+  type: object
+  required: [balance, creditLimit, availableCredit]
+  properties:
+    balance:
+      $ref: './common.yaml#/MoneyAmount'
+    creditLimit:
+      $ref: './common.yaml#/MoneyAmount'
+    availableCredit:
+      $ref: './common.yaml#/MoneyAmount'
+
+AccountMovement:
+  type: object
+  required:
+    - id
+    - commerceId
+    - type
+    - description
+    - amount
+    - balanceAfter
+    - createdAt
+    - reference
+    - status
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    commerceId:
+      $ref: './common.yaml#/OpaqueId'
+    type:
+      type: string
+      enum: [INVOICE, PAYMENT, CREDIT_NOTE, ADJUSTMENT]
+    description:
+      type: string
+    amount:
+      $ref: './common.yaml#/MoneyAmount'
+    balanceAfter:
+      $ref: './common.yaml#/MoneyAmount'
+    dueDate:
+      $ref: './common.yaml#/IsoDate'
+    createdAt:
+      $ref: './common.yaml#/IsoDateTime'
+    reference:
+      type: string
+    status:
+      type: string
+      enum: [OPEN, PAID, OVERDUE, CANCELLED]
+
+AuditEvent:
+  type: object
+  required:
+    - id
+    - userId
+    - userDisplayName
+    - action
+    - entityType
+    - entityId
+    - createdAt
+    - summary
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    userId:
+      $ref: './common.yaml#/OpaqueId'
+    userDisplayName:
+      type: string
+    action:
+      type: string
+    entityType:
+      type: string
+    entityId:
+      $ref: './common.yaml#/OpaqueId'
+    createdAt:
+      $ref: './common.yaml#/IsoDateTime'
+    summary:
+      type: string
+
+UserSummary:
+  type: object
+  required: [id, email, displayName, role]
+  properties:
+    id:
+      $ref: './common.yaml#/OpaqueId'
+    email:
+      type: string
+      format: email
+    displayName:
+      type: string
+    role:
+      $ref: '#/DemoRole'
+    distributorId:
+      $ref: './common.yaml#/OpaqueId'
+    commerceId:
+      $ref: './common.yaml#/OpaqueId'
+    warehouseId:
+      $ref: './common.yaml#/OpaqueId'
+    assignedRouteId:
+      $ref: './common.yaml#/OpaqueId'

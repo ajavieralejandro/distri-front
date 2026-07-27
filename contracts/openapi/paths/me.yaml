@@ -1,0 +1,167 @@
+# Path Items for /me/* — provisional
+# $ref: ./paths/me.yaml#/permissions | #/contexts
+
+permissions:
+  get:
+    operationId: getMyPermissions
+    summary: Permisos efectivos del usuario
+    description: >
+      Lista los permisos efectivos del caller (RBAC de servidor).
+      No existe en MSW; la demo calcula permisos solo en el cliente
+      (`src/features/auth/permissions.ts`). Este contrato es la forma objetivo.
+    tags: [Current user]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - CASHIER
+      - DRIVER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    responses:
+      '200':
+        description: Permisos del usuario autenticado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, permissions]
+              additionalProperties: false
+              properties:
+                role:
+                  $ref: '../schemas/entities.yaml#/DemoRole'
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                    example: orders:create
+            examples:
+              salesPermissions:
+                summary: Ventas
+                value:
+                  role: SALES
+                  permissions:
+                    - analytics:view_global
+                    - customers:read
+                    - products:read
+                    - orders:create
+                    - orders:read_all
+                    - orders:confirm
+                    - orders:cancel
+              pickerPermissions:
+                summary: Depósito
+                value:
+                  role: WAREHOUSE_PICKER
+                  permissions:
+                    - products:read
+                    - orders:read_all
+                    - orders:prepare
+                    - inventory:read
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+contexts:
+  get:
+    operationId: getMyContexts
+    summary: Contextos / alcances del usuario
+    description: >
+      Devuelve los alcances (distributor, commerce, warehouse, route) disponibles
+      para el usuario autenticado. Provisional: la demo guarda estos campos en
+      la sesión local sin endpoint dedicado.
+    tags: [Current user]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - CASHIER
+      - DRIVER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    responses:
+      '200':
+        description: Contextos activos y disponibles.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active]
+              additionalProperties: false
+              properties:
+                active:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    distributorId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    commerceId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    branchId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    warehouseId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    assignedRouteId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                availableCommerces:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, tradeName]
+                    properties:
+                      id:
+                        $ref: '../schemas/common.yaml#/OpaqueId'
+                      tradeName:
+                        type: string
+                availableWarehouses:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, name]
+                    properties:
+                      id:
+                        $ref: '../schemas/common.yaml#/OpaqueId'
+                      name:
+                        type: string
+                availableRoutes:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, name]
+                    properties:
+                      id:
+                        $ref: '../schemas/common.yaml#/OpaqueId'
+                      name:
+                        type: string
+            examples:
+              driverContext:
+                summary: Chofer con ruta asignada
+                value:
+                  active:
+                    distributorId: dist-1
+                    assignedRouteId: route-norte
+                  availableRoutes:
+                    - id: route-norte
+                      name: Recorrido Zona Norte — CABA
+              commerceBuyer:
+                summary: Comprador de comercio
+                value:
+                  active:
+                    distributorId: dist-1
+                    commerceId: com-el-puente
+                    branchId: br-el-puente-1
+                  availableCommerces:
+                    - id: com-el-puente
+                      tradeName: Almacén El Puente
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

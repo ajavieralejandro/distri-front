@@ -1,0 +1,189 @@
+# Path Items for /delivery/routes* — provisional
+# $ref: ./paths/delivery.yaml#/routes | #/routeById | #/routeStart
+
+routes:
+  get:
+    operationId: listDeliveryRoutes
+    summary: Listar rutas de reparto
+    description: >
+      Rutas de entrega del distribuidor. MSW responde un array bare;
+      el contrato provisional usa envoltorio paginado.
+    tags: [Delivery]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - DRIVER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+    responses:
+      '200':
+        description: Página de rutas.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/DeliveryRoute'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              routes:
+                value:
+                  items:
+                    - id: route-norte
+                      name: Recorrido Zona Norte — CABA
+                      driverUserId: usr-driver
+                      vehicleId: veh-fiorino-1
+                      status: PLANNED
+                    - id: route-oeste
+                      name: Recorrido Zona Oeste — GBA
+                      driverUserId: usr-driver
+                      vehicleId: veh-utilitario-2
+                      status: IN_PROGRESS
+                      startedAt: '2026-07-25T08:00:00-03:00'
+                  page: 0
+                  size: 20
+                  totalItems: 2
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+routeById:
+  parameters:
+    - name: routeId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  get:
+    operationId: getDeliveryRouteById
+    summary: Obtener ruta con pedidos
+    description: >
+      Detalle de la ruta e ítems/pedidos asignados. MSW responde
+      `{ route, orders }` (orders como array bare).
+    tags: [Delivery]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - DRIVER
+    responses:
+      '200':
+        description: Ruta y pedidos asociados.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [route, orders]
+              additionalProperties: false
+              properties:
+                route:
+                  $ref: '../schemas/entities.yaml#/DeliveryRoute'
+                orders:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/Order'
+            examples:
+              norte:
+                value:
+                  route:
+                    id: route-norte
+                    name: Recorrido Zona Norte — CABA
+                    driverUserId: usr-driver
+                    vehicleId: veh-fiorino-1
+                    status: PLANNED
+                  orders:
+                    - id: ord-1001
+                      number: PED-1001
+                      commerceId: com-el-puente
+                      warehouseId: wh-1
+                      routeId: route-norte
+                      status: OUT_FOR_DELIVERY
+                      priority: NORMAL
+                      stopSequence: 1
+                      createdAt: '2026-07-25T09:15:00-03:00'
+                      updatedAt: '2026-07-25T13:00:00-03:00'
+                      items: []
+                      subtotal:
+                        amount: '20400.00'
+                        currency: ARS
+                      total:
+                        amount: '20400.00'
+                        currency: ARS
+                      history: []
+                      deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                      deliveryContactName: Almacén El Puente
+                      deliveryContactPhone: '+54 11 4567-8901'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+routeStart:
+  parameters:
+    - name: routeId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  post:
+    operationId: startDeliveryRoute
+    summary: Iniciar recorrido
+    description: >
+      Marca la ruta como IN_PROGRESS y setea `startedAt`. Sin body.
+    tags: [Delivery]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - DRIVER
+    responses:
+      '200':
+        description: Ruta iniciada.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/DeliveryRoute'
+            examples:
+              started:
+                value:
+                  id: route-norte
+                  name: Recorrido Zona Norte — CABA
+                  driverUserId: usr-driver
+                  vehicleId: veh-fiorino-1
+                  status: IN_PROGRESS
+                  startedAt: '2026-07-25T08:05:00-03:00'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '409':
+        $ref: '../responses/errors.yaml#/Conflict'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

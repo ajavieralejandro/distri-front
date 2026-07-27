@@ -1,0 +1,174 @@
+# Path Items for /payments — provisional
+# $ref: ./paths/payments.yaml#/payments
+
+payments:
+  get:
+    operationId: listPayments
+    summary: Listar pagos
+    description: >
+      Pagos registrados (simulados). MSW responde array bare con `amount` string;
+      el contrato provisional pagina y usa MoneyAmount `{amount, currency: ARS}`.
+    tags: [Payments]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - CASHIER
+      - COMMERCE_OWNER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+      - name: commerceId
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/common.yaml#/OpaqueId'
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/entities.yaml#/PaymentStatus'
+      - name: method
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/entities.yaml#/PaymentMethod'
+    responses:
+      '200':
+        description: Página de pagos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/Payment'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              paymentsPage:
+                value:
+                  items:
+                    - id: pay-15
+                      commerceId: com-el-puente
+                      amount:
+                        amount: '15000.00'
+                        currency: ARS
+                      method: TRANSFER
+                      status: COMPLETED
+                      createdAt: '2026-07-24T17:20:00-03:00'
+                      reference: PAG-DEMO-015
+                      simulated: true
+                      recordedByUserId: usr-cashier
+                  page: 0
+                  size: 20
+                  totalItems: 1
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+  post:
+    operationId: createPayment
+    summary: Registrar pago
+    description: >
+      Registra un pago simulado y genera recibo demo. Requiere Idempotency-Key.
+      Body usa MoneyAmount (no string). MSW hoy acepta `amount` string y
+      `clientOperationId` (deprecated a favor del header).
+    tags: [Payments]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - CASHIER
+      - COMMERCE_OWNER
+    parameters:
+      - $ref: '../parameters/common.yaml#/IdempotencyKeyHeader'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [commerceId, amount, method]
+            additionalProperties: false
+            properties:
+              commerceId:
+                $ref: '../schemas/common.yaml#/OpaqueId'
+              amount:
+                $ref: '../schemas/common.yaml#/MoneyAmount'
+              method:
+                $ref: '../schemas/entities.yaml#/PaymentMethod'
+              reference:
+                type: string
+                description: Referencia externa opcional (p. ej. CBU / MP).
+          examples:
+            transferencia:
+              value:
+                commerceId: com-el-puente
+                amount:
+                  amount: '25000.00'
+                  currency: ARS
+                method: TRANSFER
+                reference: TRANSF-BNA-998877
+            efectivo:
+              value:
+                commerceId: com-mercado-norte
+                amount:
+                  amount: '5000.00'
+                  currency: ARS
+                method: CASH
+    responses:
+      '200':
+        description: Pago ya existente para la misma Idempotency-Key.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Payment'
+      '201':
+        description: Pago creado.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Payment'
+            examples:
+              created:
+                value:
+                  id: pay-16
+                  commerceId: com-el-puente
+                  amount:
+                    amount: '25000.00'
+                    currency: ARS
+                  method: TRANSFER
+                  status: COMPLETED
+                  createdAt: '2026-07-25T16:00:00-03:00'
+                  reference: PAG-DEMO-016
+                  simulated: true
+                  recordedByUserId: usr-cashier
+      '400':
+        $ref: '../responses/errors.yaml#/BadRequest'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '422':
+        $ref: '../responses/errors.yaml#/UnprocessableEntity'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

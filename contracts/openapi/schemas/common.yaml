@@ -1,0 +1,92 @@
+# Money & common primitives — provisional
+
+MoneyAmount:
+  type: object
+  required: [amount, currency]
+  additionalProperties: false
+  properties:
+    amount:
+      type: string
+      description: Decimal string with up to 2 fraction digits. Never float/double.
+      pattern: '^\d+(\.\d{1,2})?$'
+      example: '12500.50'
+    currency:
+      type: string
+      minLength: 3
+      maxLength: 3
+      example: ARS
+  x-contract-status: provisional
+
+OpaqueId:
+  type: string
+  minLength: 1
+  maxLength: 64
+  description: Opaque string identifier (UUID preferred for new resources).
+  example: 550e8400-e29b-41d4-a716-446655440000
+  x-contract-status: provisional
+
+IsoDateTime:
+  type: string
+  format: date-time
+  description: ISO 8601 timestamp. Timezone policy is pending (see decisions/dates-and-timezones.md).
+  example: '2026-07-25T18:30:00-03:00'
+
+IsoDate:
+  type: string
+  format: date
+  example: '2026-07-25'
+
+ErrorDetail:
+  type: object
+  additionalProperties: false
+  properties:
+    field:
+      type: string
+    issue:
+      type: string
+    rejectedValue:
+      description: Optional rejected value for debugging (never secrets).
+
+ErrorResponse:
+  type: object
+  required: [code, message, status, traceId]
+  additionalProperties: false
+  properties:
+    code:
+      type: string
+      example: ORDER_INVALID_STATE
+    message:
+      type: string
+      example: El pedido no puede confirmarse desde su estado actual.
+    status:
+      type: integer
+      example: 409
+    traceId:
+      type: string
+      example: opaque-trace-id
+    details:
+      type: array
+      items:
+        $ref: '#/ErrorDetail'
+  x-contract-status: provisional
+
+PageMeta:
+  type: object
+  required: [page, size, totalItems, totalPages]
+  properties:
+    page:
+      type: integer
+      minimum: 0
+      example: 0
+    size:
+      type: integer
+      minimum: 1
+      maximum: 100
+      example: 20
+    totalItems:
+      type: integer
+      minimum: 0
+    totalPages:
+      type: integer
+      minimum: 0
+  x-contract-status: provisional

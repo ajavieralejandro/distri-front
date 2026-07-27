@@ -15,6 +15,11 @@ dist
 dist-ssr
 coverage
 *.local
+!contracts/openapi/dist/
+!contracts/openapi/dist/**
+
+# Contract generation scratch
+contracts/postman/.generated-raw.postman_collection.json
 
 # Environment (never commit secrets or local env)
 .env

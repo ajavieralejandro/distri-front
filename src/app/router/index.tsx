@@ -1,42 +1,43 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
-
-import { AdminLayout } from '@/app/layouts/AdminLayout';
-import { CommerceLayout } from '@/app/layouts/CommerceLayout';
-import { WarehouseLayout } from '@/app/layouts/WarehouseLayout';
-import { CashierLayout } from '@/app/layouts/CashierLayout';
-import { DeliveryLayout } from '@/app/layouts/DeliveryLayout';
-import { AccountPage } from '@/pages/commerce/AccountPage';
+import { AdminAlertsPage } from '@/pages/admin/AdminAlertsPage';
+import { AdminAnalyticsPage } from '@/pages/admin/AdminAnalyticsPage';
+import { AdminAuditPage } from '@/pages/admin/AdminAuditPage';
+import { AdminBillingPage } from '@/pages/admin/AdminBillingPage';
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage';
-import { CartPage } from '@/pages/commerce/CartPage';
-import { CatalogPage } from '@/pages/commerce/CatalogPage';
-import { CommerceOrdersPage } from '@/pages/commerce/OrdersPage';
+import { AdminMapPage } from '@/pages/admin/AdminMapPage';
+import { AdminUsersPage } from '@/pages/admin/AdminUsersPage';
+import { CustomerDetailPage } from '@/pages/admin/CustomerDetailPage';
 import { CustomersPage } from '@/pages/admin/CustomersPage';
 import { InventoryPage } from '@/pages/admin/InventoryPage';
-import { LoginPage } from '@/pages/LoginPage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
+import { OrderDetailPage } from '@/pages/admin/OrderDetailPage';
 import { OrdersPage } from '@/pages/admin/OrdersPage';
 import { PaymentsPage } from '@/pages/admin/PaymentsPage';
 import { ProductsPage } from '@/pages/admin/ProductsPage';
-import { RequireDemoAuth } from '@/app/router/RequireDemoAuth';
-import { CustomerDetailPage } from '@/pages/admin/CustomerDetailPage';
-import { OrderDetailPage } from '@/pages/admin/OrderDetailPage';
-import { ForbiddenPage } from '@/pages/ForbiddenPage';
-import { AdminAnalyticsPage } from '@/pages/admin/AdminAnalyticsPage';
-import { AdminUsersPage } from '@/pages/admin/AdminUsersPage';
-import { AdminAuditPage } from '@/pages/admin/AdminAuditPage';
-import { AdminBillingPage } from '@/pages/admin/AdminBillingPage';
-import { WarehouseHomePage } from '@/pages/operations/WarehouseHomePage';
-import { WarehouseOrdersPage } from '@/pages/operations/WarehouseOrdersPage';
-import { WarehouseOrderDetailPage } from '@/pages/operations/WarehouseOrderDetailPage';
-import { CashierHomePage } from '@/pages/operations/CashierHomePage';
+import { AccountPage } from '@/pages/commerce/AccountPage';
+import { CartPage } from '@/pages/commerce/CartPage';
+import { CatalogPage } from '@/pages/commerce/CatalogPage';
+import { CommerceBillingPage } from '@/pages/commerce/CommerceBillingPage';
+import { CommerceDashboardPage } from '@/pages/commerce/CommerceDashboardPage';
+import { CommerceOrdersPage } from '@/pages/commerce/OrdersPage';
 import { CashierCustomerPage } from '@/pages/operations/CashierCustomerPage';
+import { CashierHomePage } from '@/pages/operations/CashierHomePage';
 import { CashierPaymentsPage } from '@/pages/operations/CashierPaymentsPage';
 import { CashierReceiptPage } from '@/pages/operations/CashierReceiptPage';
 import { DeliveryHomePage } from '@/pages/operations/DeliveryHomePage';
-import { DeliveryRoutePage } from '@/pages/operations/DeliveryRoutePage';
 import { DeliveryOrderPage } from '@/pages/operations/DeliveryOrderPage';
-import { CommerceDashboardPage } from '@/pages/commerce/CommerceDashboardPage';
-import { CommerceBillingPage } from '@/pages/commerce/CommerceBillingPage';
+import { DeliveryRoutePage } from '@/pages/operations/DeliveryRoutePage';
+import { WarehouseHomePage } from '@/pages/operations/WarehouseHomePage';
+import { WarehouseOrderDetailPage } from '@/pages/operations/WarehouseOrderDetailPage';
+import { WarehouseOrdersPage } from '@/pages/operations/WarehouseOrdersPage';
+import { ForbiddenPage } from '@/pages/ForbiddenPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { NotFoundPage } from '@/pages/NotFoundPage';
+import { RequireDemoAuth } from '@/app/router/RequireDemoAuth';
+import { AdminLayout } from '@/app/layouts/AdminLayout';
+import { CashierLayout } from '@/app/layouts/CashierLayout';
+import { CommerceLayout } from '@/app/layouts/CommerceLayout';
+import { DeliveryLayout } from '@/app/layouts/DeliveryLayout';
+import { WarehouseLayout } from '@/app/layouts/WarehouseLayout';
+import { Navigate, Route, Routes } from 'react-router-dom';
 
 export function AppRouter() {
   return (
@@ -64,6 +65,10 @@ export function AppRouter() {
           <Route path="products" element={<ProductsPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/:orderId" element={<OrderDetailPage />} />
+          <Route element={<RequireDemoAuth roles={['DISTRIBUTOR_ADMIN']} />}>
+            <Route path="alerts" element={<AdminAlertsPage />} />
+            <Route path="map" element={<AdminMapPage />} />
+          </Route>
           <Route element={<RequireDemoAuth permission="inventory:read" />}>
             <Route path="inventory" element={<InventoryPage />} />
           </Route>

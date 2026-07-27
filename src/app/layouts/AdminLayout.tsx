@@ -7,44 +7,102 @@ import { useDemoSession, useLogoutMutation } from '@/features/auth/hooks';
 import { ResetDemoButton } from '@/features/demo/ResetDemoButton';
 import { DemoBanner } from '@/shared/components/DemoBanner';
 import { hasPermission } from '@/features/auth/permissions';
-import type { Permission } from '@/shared/types/demo';
+import type { DemoRole, Permission } from '@/shared/types/demo';
 import { roleLabels } from '@/shared/lib/labels';
 
-const adminNavItems: Array<{
+type AdminNavItem = {
   to: string;
   label: string;
   permission?: Permission;
-}> = [
-  { to: '/admin/dashboard', label: 'Dashboard' },
+  roles?: DemoRole[];
+};
+
+type AdminNavSection = {
+  title: string;
+  items: AdminNavItem[];
+};
+
+const adminNavSections: AdminNavSection[] = [
   {
-    to: '/admin/analytics',
-    label: 'Analítica',
-    permission: 'analytics:view_global' as const,
+    title: 'Operación',
+    items: [
+      { to: '/admin/dashboard', label: 'Resumen' },
+      { to: '/admin/orders', label: 'Pedidos' },
+      {
+        to: '/admin/alerts',
+        label: 'Alertas',
+        roles: ['DISTRIBUTOR_ADMIN'],
+      },
+      {
+        to: '/admin/map',
+        label: 'Mapa',
+        roles: ['DISTRIBUTOR_ADMIN'],
+      },
+      {
+        to: '/operations/warehouse',
+        label: 'Preparación',
+        permission: 'orders:prepare',
+        roles: ['DISTRIBUTOR_ADMIN'],
+      },
+    ],
   },
-  { to: '/admin/customers', label: 'Clientes' },
-  { to: '/admin/products', label: 'Productos' },
-  { to: '/admin/orders', label: 'Pedidos' },
   {
-    to: '/admin/inventory',
-    label: 'Inventario',
-    permission: 'inventory:read' as const,
+    title: 'Comercial',
+    items: [
+      { to: '/admin/customers', label: 'Clientes' },
+      { to: '/admin/products', label: 'Productos' },
+    ],
   },
   {
-    to: '/admin/payments',
-    label: 'Pagos',
-    permission: 'payments:read_all' as const,
+    title: 'Stock',
+    items: [
+      {
+        to: '/admin/inventory',
+        label: 'Inventario',
+        permission: 'inventory:read',
+      },
+    ],
   },
   {
-    to: '/admin/billing',
-    label: 'Facturación',
-    permission: 'billing:read_all' as const,
+    title: 'Finanzas (demo)',
+    items: [
+      {
+        to: '/admin/payments',
+        label: 'Pagos',
+        permission: 'payments:read_all',
+      },
+      {
+        to: '/admin/billing',
+        label: 'Facturación',
+        permission: 'billing:read_all',
+      },
+    ],
   },
   {
-    to: '/admin/users',
-    label: 'Usuarios',
-    permission: 'users:manage_demo' as const,
+    title: 'Análisis',
+    items: [
+      {
+        to: '/admin/analytics',
+        label: 'Analítica',
+        permission: 'analytics:view_global',
+      },
+      {
+        to: '/admin/audit',
+        label: 'Auditoría',
+        permission: 'audit:read',
+      },
+    ],
   },
-  { to: '/admin/audit', label: 'Auditoría', permission: 'audit:read' as const },
+  {
+    title: 'Sistema',
+    items: [
+      {
+        to: '/admin/users',
+        label: 'Usuarios',
+        permission: 'users:manage_demo',
+      },
+    ],
+  },
 ];
 
 function navClassName({ isActive }: { isActive: boolean }): string {
@@ -61,6 +119,20 @@ export function AdminLayout() {
   const navId = useId();
   const session = useDemoSession();
   const logout = useLogoutMutation();
+
+  const visibleSections = adminNavSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (!session) return false;
+        if (item.roles && !item.roles.includes(session.role)) return false;
+        if (item.permission && !hasPermission(session.role, item.permission)) {
+          return false;
+        }
+        return true;
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
 
   return (
     <>
@@ -89,26 +161,29 @@ export function AdminLayout() {
             id={navId}
             aria-label="Navegación administrativa"
             className={[
-              'space-y-1 px-3 pb-4',
+              'space-y-4 px-3 pb-4',
               isMobileNavOpen ? 'block' : 'hidden lg:block',
             ].join(' ')}
           >
-            {adminNavItems
-              .filter(
-                (item) =>
-                  !item.permission ||
-                  (session && hasPermission(session.role, item.permission)),
-              )
-              .map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={navClassName}
-                  onClick={() => setIsMobileNavOpen(false)}
-                >
-                  {item.label}
-                </NavLink>
-              ))}
+            {visibleSections.map((section) => (
+              <div key={section.title}>
+                <p className="mb-1 px-3 text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">
+                  {section.title}
+                </p>
+                <div className="space-y-1">
+                  {section.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={navClassName}
+                      onClick={() => setIsMobileNavOpen(false)}
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            ))}
           </nav>
         </aside>
 

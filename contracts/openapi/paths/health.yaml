@@ -1,0 +1,28 @@
+# Path Item for GET /health
+get:
+  operationId: getHealth
+  summary: Estado del servicio
+  description: >
+    Health check público del API. No requiere autenticación.
+    Nota: la demo MSW puede no exponer este endpoint con el mismo contrato;
+    esta operación define la forma provisional objetivo.
+  tags: [System]
+  security: []
+  x-contract-status: provisional
+  x-allowed-roles: []
+  responses:
+    '200':
+      description: Servicio operativo.
+      content:
+        application/json:
+          schema:
+            $ref: '../schemas/entities.yaml#/HealthResponse'
+          examples:
+            ok:
+              summary: API saludable
+              value:
+                status: ok
+                service: distrisoft-api
+                timestamp: '2026-07-25T16:05:00-03:00'
+    '500':
+      $ref: '../responses/errors.yaml#/InternalError'

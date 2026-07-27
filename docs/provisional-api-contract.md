@@ -1,6 +1,9 @@
 # Contrato API provisional (demo)
 
-Todos los endpoints siguientes son:
+> **Fuente de verdad provisional:** [`contracts/`](../contracts/README.md) (OpenAPI 0.1.0-provisional + Postman).
+> Este documento resume el comportamiento MSW actual; puede diferir del contrato objetivo (paginación, MoneyAmount, `/auth/*`).
+
+Todos los endpoints mock siguen siendo:
 
 **PROVISIONAL — pendiente de validación con Distrisoft API**
 

@@ -1,0 +1,105 @@
+BadRequest:
+  description: Solicitud inválida.
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.yaml#/ErrorResponse'
+      example:
+        code: BAD_REQUEST
+        message: La solicitud no es válida.
+        status: 400
+        traceId: opaque-trace-id
+        details: []
+
+Unauthorized:
+  description: Autenticación requerida o token inválido.
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.yaml#/ErrorResponse'
+      example:
+        code: UNAUTHORIZED
+        message: Autenticación requerida.
+        status: 401
+        traceId: opaque-trace-id
+        details: []
+
+Forbidden:
+  description: Autenticado pero sin permiso o fuera de alcance.
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.yaml#/ErrorResponse'
+      example:
+        code: FORBIDDEN
+        message: No tenés permiso para esta operación.
+        status: 403
+        traceId: opaque-trace-id
+        details: []
+
+NotFound:
+  description: Recurso inexistente (o oculto por política de aislamiento).
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.yaml#/ErrorResponse'
+      example:
+        code: NOT_FOUND
+        message: Recurso no encontrado.
+        status: 404
+        traceId: opaque-trace-id
+        details: []
+
+Conflict:
+  description: Conflicto de estado o de negocio.
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.yaml#/ErrorResponse'
+      example:
+        code: ORDER_INVALID_STATE
+        message: El pedido no puede confirmarse desde su estado actual.
+        status: 409
+        traceId: opaque-trace-id
+        details: []
+
+UnprocessableEntity:
+  description: Payload semánticamente inválido.
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.yaml#/ErrorResponse'
+      example:
+        code: VALIDATION_ERROR
+        message: Uno o más campos no son válidos.
+        status: 422
+        traceId: opaque-trace-id
+        details:
+          - field: items
+            issue: Debe incluir al menos un producto.
+
+TooManyRequests:
+  description: Límite de tasa excedido.
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.yaml#/ErrorResponse'
+      example:
+        code: RATE_LIMITED
+        message: Demasiadas solicitudes. Reintentá más tarde.
+        status: 429
+        traceId: opaque-trace-id
+        details: []
+
+InternalError:
+  description: Error interno.
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.yaml#/ErrorResponse'
+      example:
+        code: INTERNAL_ERROR
+        message: Error interno del servidor.
+        status: 500
+        traceId: opaque-trace-id
+        details: []

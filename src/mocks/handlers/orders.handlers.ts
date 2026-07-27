@@ -108,14 +108,27 @@ export const orderHandlers = [
     const commerceId = params.get('commerceId');
     const warehouseId = params.get('warehouseId');
     const routeId = params.get('routeId');
+    const priority = params.get('priority');
+    const search = (params.get('search') ?? '').trim().toLowerCase();
     const orders = mutateDatabase((database) =>
-      database.orders.filter(
-        (order) =>
+      database.orders.filter((order) => {
+        const commerce = database.commerces.find(
+          (candidate) => candidate.id === order.commerceId,
+        );
+        const matchesSearch =
+          !search ||
+          order.number.toLowerCase().includes(search) ||
+          (commerce?.tradeName.toLowerCase().includes(search) ?? false) ||
+          (commerce?.businessName.toLowerCase().includes(search) ?? false);
+        return (
+          matchesSearch &&
           (!status || order.status === status) &&
           (!commerceId || order.commerceId === commerceId) &&
           (!warehouseId || order.warehouseId === warehouseId) &&
-          (!routeId || order.routeId === routeId),
-      ),
+          (!routeId || order.routeId === routeId) &&
+          (!priority || order.priority === priority)
+        );
+      }),
     );
     return HttpResponse.json(orders);
   }),

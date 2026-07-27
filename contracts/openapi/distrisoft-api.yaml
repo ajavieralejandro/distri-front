@@ -1,0 +1,219 @@
+openapi: 3.1.0
+info:
+  title: Distrisoft API
+  version: 0.1.0-provisional
+  summary: Provisional commercial API for Distrisoft
+  description: |
+    **PROVISIONAL — not a stable contract.**
+
+    Derived from the Distrisoft web demo (MSW handlers, feature clients, and types).
+    OpenAPI is the provisional source of truth for the future Spring Boot backend.
+
+    Important:
+    - UI roles adapt navigation only. Authorization is enforced by the API.
+    - Demo invoices/receipts have **no fiscal validity** (not ARCA-authorized).
+    - MSW currently returns bare arrays and string money; this contract targets
+      paginated list envelopes and `MoneyAmount` objects.
+    - See `contracts/decisions/` for open questions.
+
+    Traceability: `contracts/traceability.md`
+  license:
+    name: Proprietary
+    url: https://example.invalid/license
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local Spring Boot (future)
+  - url: http://localhost:4010/api
+    description: OpenAPI mock (Prism)
+  - url: https://api-staging.example.invalid/api
+    description: Staging example only — not a real environment
+
+tags:
+  - name: System
+  - name: Authentication
+  - name: Current user
+  - name: Customers
+  - name: Products
+  - name: Orders
+  - name: Inventory
+  - name: Delivery
+  - name: Accounts
+  - name: Payments
+  - name: Billing
+  - name: Analytics
+  - name: Users
+  - name: Audit
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    $ref: './paths/health.yaml'
+  /auth/login:
+    $ref: './paths/auth.yaml#/login'
+  /auth/refresh:
+    $ref: './paths/auth.yaml#/refresh'
+  /auth/logout:
+    $ref: './paths/auth.yaml#/logout'
+  /auth/me:
+    $ref: './paths/auth.yaml#/me'
+  /me/permissions:
+    $ref: './paths/me.yaml#/permissions'
+  /me/contexts:
+    $ref: './paths/me.yaml#/contexts'
+  /customers:
+    $ref: './paths/customers.yaml#/customers'
+  /customers/{customerId}:
+    $ref: './paths/customers.yaml#/customerById'
+  /products:
+    $ref: './paths/products.yaml#/products'
+  /products/{productId}:
+    $ref: './paths/products.yaml#/productById'
+  /categories:
+    $ref: './paths/products.yaml#/categories'
+  /orders:
+    $ref: './paths/orders.yaml#/orders'
+  /orders/{orderId}:
+    $ref: './paths/orders.yaml#/orderById'
+  /orders/{orderId}/status:
+    $ref: './paths/orders.yaml#/orderStatus'
+  /orders/{orderId}/prepare-items:
+    $ref: './paths/orders.yaml#/orderPrepareItems'
+  /orders/{orderId}/ready-for-dispatch:
+    $ref: './paths/orders.yaml#/orderReadyForDispatch'
+  /orders/{orderId}/delivery:
+    $ref: './paths/orders.yaml#/orderDelivery'
+  /inventory:
+    $ref: './paths/inventory.yaml#/inventory'
+  /inventory/adjust:
+    $ref: './paths/inventory.yaml#/inventoryAdjust'
+  /delivery/routes:
+    $ref: './paths/delivery.yaml#/routes'
+  /delivery/routes/{routeId}:
+    $ref: './paths/delivery.yaml#/routeById'
+  /delivery/routes/{routeId}/start:
+    $ref: './paths/delivery.yaml#/routeStart'
+  /accounts/{commerceId}/summary:
+    $ref: './paths/accounts.yaml#/accountSummary'
+  /accounts/{commerceId}/movements:
+    $ref: './paths/accounts.yaml#/accountMovements'
+  /payments:
+    $ref: './paths/payments.yaml#/payments'
+  /invoices:
+    $ref: './paths/billing.yaml#/invoices'
+  /invoices/{invoiceId}/issue:
+    $ref: './paths/billing.yaml#/invoiceIssue'
+  /invoices/{invoiceId}/cancel:
+    $ref: './paths/billing.yaml#/invoiceCancel'
+  /receipts:
+    $ref: './paths/billing.yaml#/receipts'
+  /receipts/{receiptId}:
+    $ref: './paths/billing.yaml#/receiptById'
+  /analytics/admin:
+    $ref: './paths/analytics.yaml#/analyticsAdmin'
+  /analytics/commerce/{commerceId}:
+    $ref: './paths/analytics.yaml#/analyticsCommerce'
+  /admin/dashboard:
+    $ref: './paths/analytics.yaml#/adminDashboard'
+  /users:
+    $ref: './paths/users-audit.yaml#/users'
+  /audit:
+    $ref: './paths/users-audit.yaml#/audit'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      $ref: './security/bearer.yaml#/bearerAuth'
+  parameters:
+    PageParam:
+      $ref: './parameters/common.yaml#/PageParam'
+    SizeParam:
+      $ref: './parameters/common.yaml#/SizeParam'
+    SortParam:
+      $ref: './parameters/common.yaml#/SortParam'
+    IdempotencyKeyHeader:
+      $ref: './parameters/common.yaml#/IdempotencyKeyHeader'
+  schemas:
+    MoneyAmount:
+      $ref: './schemas/common.yaml#/MoneyAmount'
+    OpaqueId:
+      $ref: './schemas/common.yaml#/OpaqueId'
+    IsoDateTime:
+      $ref: './schemas/common.yaml#/IsoDateTime'
+    IsoDate:
+      $ref: './schemas/common.yaml#/IsoDate'
+    ErrorDetail:
+      $ref: './schemas/common.yaml#/ErrorDetail'
+    ErrorResponse:
+      $ref: './schemas/common.yaml#/ErrorResponse'
+    PageMeta:
+      $ref: './schemas/common.yaml#/PageMeta'
+    DemoRole:
+      $ref: './schemas/entities.yaml#/DemoRole'
+    OrderStatus:
+      $ref: './schemas/entities.yaml#/OrderStatus'
+    PickItemStatus:
+      $ref: './schemas/entities.yaml#/PickItemStatus'
+    PaymentMethod:
+      $ref: './schemas/entities.yaml#/PaymentMethod'
+    PaymentStatus:
+      $ref: './schemas/entities.yaml#/PaymentStatus'
+    DeliveryResult:
+      $ref: './schemas/entities.yaml#/DeliveryResult'
+    InvoiceStatus:
+      $ref: './schemas/entities.yaml#/InvoiceStatus'
+    Commerce:
+      $ref: './schemas/entities.yaml#/Commerce'
+    Product:
+      $ref: './schemas/entities.yaml#/Product'
+    Category:
+      $ref: './schemas/entities.yaml#/Category'
+    OrderItem:
+      $ref: './schemas/entities.yaml#/OrderItem'
+    OrderStatusEvent:
+      $ref: './schemas/entities.yaml#/OrderStatusEvent'
+    Order:
+      $ref: './schemas/entities.yaml#/Order'
+    Payment:
+      $ref: './schemas/entities.yaml#/Payment'
+    Invoice:
+      $ref: './schemas/entities.yaml#/Invoice'
+    Receipt:
+      $ref: './schemas/entities.yaml#/Receipt'
+    CurrentUser:
+      $ref: './schemas/entities.yaml#/CurrentUser'
+    TokenPair:
+      $ref: './schemas/entities.yaml#/TokenPair'
+    HealthResponse:
+      $ref: './schemas/entities.yaml#/HealthResponse'
+    InventoryItem:
+      $ref: './schemas/entities.yaml#/InventoryItem'
+    DeliveryRoute:
+      $ref: './schemas/entities.yaml#/DeliveryRoute'
+    AccountSummary:
+      $ref: './schemas/entities.yaml#/AccountSummary'
+    AccountMovement:
+      $ref: './schemas/entities.yaml#/AccountMovement'
+    AuditEvent:
+      $ref: './schemas/entities.yaml#/AuditEvent'
+    UserSummary:
+      $ref: './schemas/entities.yaml#/UserSummary'
+  responses:
+    BadRequest:
+      $ref: './responses/errors.yaml#/BadRequest'
+    Unauthorized:
+      $ref: './responses/errors.yaml#/Unauthorized'
+    Forbidden:
+      $ref: './responses/errors.yaml#/Forbidden'
+    NotFound:
+      $ref: './responses/errors.yaml#/NotFound'
+    Conflict:
+      $ref: './responses/errors.yaml#/Conflict'
+    UnprocessableEntity:
+      $ref: './responses/errors.yaml#/UnprocessableEntity'
+    TooManyRequests:
+      $ref: './responses/errors.yaml#/TooManyRequests'
+    InternalError:
+      $ref: './responses/errors.yaml#/InternalError'

@@ -1,0 +1,177 @@
+# Path Items for /users and /audit — provisional
+# $ref: ./paths/users-audit.yaml#/users | #/audit
+
+users:
+  get:
+    operationId: listUsers
+    summary: Listar usuarios demo
+    description: >
+      Usuarios visibles según rol (admin del distribuidor o dueño de comercio).
+      MSW responde array bare sin paginación; el contrato provisional pagina.
+      No incluye contraseñas ni secretos.
+    tags: [Users]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - COMMERCE_OWNER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+      - name: role
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/entities.yaml#/DemoRole'
+    responses:
+      '200':
+        description: Página de usuarios.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/UserSummary'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              usersPage:
+                value:
+                  items:
+                    - id: usr-admin
+                      email: admin@demo.distrisoft.local
+                      displayName: Administrador Demo
+                      role: DISTRIBUTOR_ADMIN
+                      distributorId: dist-1
+                    - id: usr-sales
+                      email: ventas@demo.distrisoft.local
+                      displayName: Ventas Demo
+                      role: SALES
+                      distributorId: dist-1
+                    - id: usr-picker
+                      email: deposito@demo.distrisoft.local
+                      displayName: Depósito Demo
+                      role: WAREHOUSE_PICKER
+                      distributorId: dist-1
+                      warehouseId: wh-1
+                    - id: usr-cashier
+                      email: caja@demo.distrisoft.local
+                      displayName: Caja Demo
+                      role: CASHIER
+                      distributorId: dist-1
+                    - id: usr-driver
+                      email: reparto@demo.distrisoft.local
+                      displayName: Reparto Demo
+                      role: DRIVER
+                      distributorId: dist-1
+                      assignedRouteId: route-norte
+                  page: 0
+                  size: 20
+                  totalItems: 5
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+audit:
+  get:
+    operationId: listAuditEvents
+    summary: Listar eventos de auditoría
+    description: >
+      Eventos de auditoría demo (cambios de estado, pagos, facturas, entregas).
+      MSW responde array bare; el contrato provisional pagina.
+    tags: [Audit]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+      - name: entityType
+        in: query
+        required: false
+        schema:
+          type: string
+          example: order
+      - name: entityId
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/common.yaml#/OpaqueId'
+    responses:
+      '200':
+        description: Página de eventos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/AuditEvent'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              events:
+                value:
+                  items:
+                    - id: aud-201
+                      userId: usr-cashier
+                      userDisplayName: Caja Demo
+                      action: PAYMENT_RECORDED
+                      entityType: payment
+                      entityId: pay-15
+                      createdAt: '2026-07-24T17:20:00-03:00'
+                      summary: Pago PAG-DEMO-015 registrado.
+                    - id: aud-200
+                      userId: usr-driver
+                      userDisplayName: Reparto Demo
+                      action: DELIVERY_REPORTED
+                      entityType: order
+                      entityId: ord-0998
+                      createdAt: '2026-07-24T16:05:00-03:00'
+                      summary: 'Resultado de entrega: DELIVERED_OK.'
+                    - id: aud-199
+                      userId: usr-admin
+                      userDisplayName: Administrador Demo
+                      action: ORDER_STATUS_CHANGED
+                      entityType: order
+                      entityId: ord-0998
+                      createdAt: '2026-07-24T12:10:00-03:00'
+                      summary: 'Pedido PED-0998: READY_FOR_DISPATCH a OUT_FOR_DELIVERY.'
+                  page: 0
+                  size: 20
+                  totalItems: 3
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

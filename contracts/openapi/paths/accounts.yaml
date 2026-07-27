@@ -1,0 +1,142 @@
+# Path Items for /accounts/{commerceId}/* — provisional
+# $ref: ./paths/accounts.yaml#/accountSummary | #/accountMovements
+
+accountSummary:
+  parameters:
+    - name: commerceId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  get:
+    operationId: getAccountSummary
+    summary: Resumen de cuenta corriente
+    description: >
+      Saldo, límite y crédito disponible del comercio.
+      MSW usa money string; el contrato provisional usa MoneyAmount ARS.
+    tags: [Accounts]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - CASHIER
+      - COMMERCE_OWNER
+    responses:
+      '200':
+        description: Resumen de cuenta.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/AccountSummary'
+            examples:
+              elPuente:
+                value:
+                  balance:
+                    amount: '87500.50'
+                    currency: ARS
+                  creditLimit:
+                    amount: '500000.00'
+                    currency: ARS
+                  availableCredit:
+                    amount: '412499.50'
+                    currency: ARS
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+accountMovements:
+  parameters:
+    - name: commerceId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  get:
+    operationId: listAccountMovements
+    summary: Movimientos de cuenta corriente
+    description: >
+      Historial de movimientos (facturas, pagos, notas de crédito, ajustes).
+      MSW responde array bare con money string; contrato provisional pagina
+      y usa MoneyAmount.
+    tags: [Accounts]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - CASHIER
+      - COMMERCE_OWNER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+    responses:
+      '200':
+        description: Página de movimientos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/AccountMovement'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              movements:
+                value:
+                  items:
+                    - id: acc-101
+                      commerceId: com-el-puente
+                      type: INVOICE
+                      description: Factura demo PED-1001
+                      amount:
+                        amount: '20400.00'
+                        currency: ARS
+                      balanceAfter:
+                        amount: '87500.50'
+                        currency: ARS
+                      dueDate: '2026-08-24'
+                      createdAt: '2026-07-25T14:40:00-03:00'
+                      reference: DEMO-FC-000012
+                      status: OPEN
+                    - id: acc-100
+                      commerceId: com-el-puente
+                      type: PAYMENT
+                      description: Pago de demo recibido
+                      amount:
+                        amount: '15000.00'
+                        currency: ARS
+                      balanceAfter:
+                        amount: '67100.50'
+                        currency: ARS
+                      createdAt: '2026-07-24T17:20:00-03:00'
+                      reference: PAG-DEMO-015
+                      status: PAID
+                  page: 0
+                  size: 20
+                  totalItems: 2
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

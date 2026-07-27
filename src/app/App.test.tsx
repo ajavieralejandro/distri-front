@@ -50,7 +50,7 @@ describe('App', () => {
       }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: /dashboard/i }),
+      await screen.findByRole('heading', { name: /resumen/i }),
     ).toBeInTheDocument();
   });
 

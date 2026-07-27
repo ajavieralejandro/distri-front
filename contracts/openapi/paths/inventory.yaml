@@ -1,0 +1,206 @@
+# Path Items for /inventory* — provisional
+# $ref: ./paths/inventory.yaml#/inventory | #/inventoryAdjust
+
+inventory:
+  get:
+    operationId: listInventory
+    summary: Listar inventario
+    description: >
+      Stock por producto y depósito. MSW responde un array bare sin paginación;
+      el contrato provisional usa envoltorio paginado.
+    tags: [Inventory]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - WAREHOUSE_PICKER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Busca por nombre o SKU del producto.
+      - name: warehouseId
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/common.yaml#/OpaqueId'
+      - name: lowStock
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Si true, solo ítems en o bajo el umbral de stock bajo.
+    responses:
+      '200':
+        description: Página de inventario.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/InventoryItem'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              warehouse1:
+                value:
+                  items:
+                    - id: inv-agua-wh1
+                      productId: prod-agua-15
+                      warehouseId: wh-1
+                      physicalStock: 280
+                      reservedStock: 40
+                      availableStock: 240
+                      lowStockThreshold: 50
+                    - id: inv-cola-wh1
+                      productId: prod-gaseosa-cola
+                      warehouseId: wh-1
+                      physicalStock: 60
+                      reservedStock: 12
+                      availableStock: 48
+                      lowStockThreshold: 20
+                  page: 0
+                  size: 20
+                  totalItems: 2
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+inventoryAdjust:
+  post:
+    operationId: adjustInventory
+    summary: Ajustar stock
+    description: >
+      Ajuste manual de inventario (entrada/salida) con motivo obligatorio.
+      `quantity` puede ser negativo. No puede dejar stock físico menor al reservado.
+    tags: [Inventory]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [productId, warehouseId, quantity, reason]
+            additionalProperties: false
+            properties:
+              productId:
+                $ref: '../schemas/common.yaml#/OpaqueId'
+              warehouseId:
+                $ref: '../schemas/common.yaml#/OpaqueId'
+              quantity:
+                type: integer
+                description: Delta de unidades (positivo o negativo).
+              reason:
+                type: string
+                minLength: 1
+                example: Ajuste por inventario físico julio 2026
+          examples:
+            entrada:
+              value:
+                productId: prod-agua-15
+                warehouseId: wh-1
+                quantity: 48
+                reason: Ingreso de remito REM-7788 proveedor Aguas del Sur
+            salida:
+              value:
+                productId: prod-gaseosa-cola
+                warehouseId: wh-1
+                quantity: -3
+                reason: Merma por envases dañados en picking
+    responses:
+      '201':
+        description: Ajuste aplicado.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item, movement]
+              additionalProperties: false
+              properties:
+                item:
+                  $ref: '../schemas/entities.yaml#/InventoryItem'
+                movement:
+                  type: object
+                  required:
+                    - id
+                    - productId
+                    - warehouseId
+                    - quantity
+                    - reason
+                    - createdAt
+                    - simulated
+                  properties:
+                    id:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    productId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    warehouseId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+                    quantity:
+                      type: integer
+                    reason:
+                      type: string
+                    createdAt:
+                      $ref: '../schemas/common.yaml#/IsoDateTime'
+                    simulated:
+                      type: boolean
+                      const: true
+                    userId:
+                      $ref: '../schemas/common.yaml#/OpaqueId'
+            examples:
+              adjusted:
+                value:
+                  item:
+                    id: inv-agua-wh1
+                    productId: prod-agua-15
+                    warehouseId: wh-1
+                    physicalStock: 328
+                    reservedStock: 40
+                    availableStock: 288
+                    lowStockThreshold: 50
+                  movement:
+                    id: imv-42
+                    productId: prod-agua-15
+                    warehouseId: wh-1
+                    quantity: 48
+                    reason: Ingreso de remito REM-7788 proveedor Aguas del Sur
+                    createdAt: '2026-07-25T15:10:00-03:00'
+                    simulated: true
+                    userId: usr-admin
+      '400':
+        $ref: '../responses/errors.yaml#/BadRequest'
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '422':
+        $ref: '../responses/errors.yaml#/UnprocessableEntity'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

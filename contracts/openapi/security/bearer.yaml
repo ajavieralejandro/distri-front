@@ -1,0 +1,8 @@
+bearerAuth:
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  description: >
+    Autenticación provisional Bearer. El formato exacto del token (JWT u otro)
+    está pendiente — ver decisions/authentication.md.
+    La UI demo actual NO usa este esquema; usa sesión en sessionStorage.

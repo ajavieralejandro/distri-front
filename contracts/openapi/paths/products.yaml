@@ -1,0 +1,218 @@
+# Path Items for /products*, /categories — provisional
+# $ref: ./paths/products.yaml#/products | #/productById | #/categories
+
+products:
+  get:
+    operationId: listProducts
+    summary: Listar productos
+    description: >
+      Catálogo de productos del distribuidor.
+      MSW demo responde un array bare con `price` como string; el contrato
+      provisional usa paginación y MoneyAmount `{amount, currency: ARS}`.
+    tags: [Products]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Busca por nombre, SKU o descripción.
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          $ref: '../schemas/common.yaml#/OpaqueId'
+      - name: active
+        in: query
+        required: false
+        schema:
+          type: boolean
+    responses:
+      '200':
+        description: Página de productos.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/Product'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              bebidas:
+                value:
+                  items:
+                    - id: prod-agua-15
+                      sku: BEB-001
+                      name: Agua mineral
+                      description: Agua mineral sin gas 1.5 L
+                      categoryId: cat-bebidas
+                      unit: UNIT
+                      presentation: Botella 1.5 L
+                      price:
+                        amount: '850.00'
+                        currency: ARS
+                      availableStock: 240
+                      active: true
+                    - id: prod-gaseosa-cola
+                      sku: BEB-014
+                      name: Gaseosa cola
+                      description: Pack x6 de 2.25 L
+                      categoryId: cat-bebidas
+                      unit: PACK
+                      presentation: Pack x6 2.25 L
+                      price:
+                        amount: '12500.50'
+                        currency: ARS
+                      availableStock: 48
+                      active: true
+                  page: 0
+                  size: 20
+                  totalItems: 2
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+productById:
+  parameters:
+    - name: productId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+  get:
+    operationId: getProductById
+    summary: Obtener producto por ID
+    description: Detalle de un producto del catálogo.
+    tags: [Products]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    responses:
+      '200':
+        description: Producto encontrado.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Product'
+            examples:
+              agua:
+                value:
+                  id: prod-agua-15
+                  sku: BEB-001
+                  name: Agua mineral
+                  description: Agua mineral sin gas 1.5 L
+                  categoryId: cat-bebidas
+                  unit: UNIT
+                  presentation: Botella 1.5 L
+                  price:
+                    amount: '850.00'
+                    currency: ARS
+                  availableStock: 240
+                  active: true
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+categories:
+  get:
+    operationId: listCategories
+    summary: Listar categorías
+    description: >
+      Categorías del catálogo. MSW responde un array bare; el contrato
+      provisional agrega envoltorio paginado para consistencia.
+    tags: [Products]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - WAREHOUSE_PICKER
+      - COMMERCE_OWNER
+      - COMMERCE_BUYER
+      - COMMERCE_CASHIER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+    responses:
+      '200':
+        description: Página de categorías.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/Category'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              cats:
+                value:
+                  items:
+                    - id: cat-bebidas
+                      name: Bebidas
+                    - id: cat-almacen
+                      name: Almacén
+                    - id: cat-limpieza
+                      name: Limpieza
+                  page: 0
+                  size: 20
+                  totalItems: 3
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

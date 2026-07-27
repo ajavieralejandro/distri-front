@@ -1,0 +1,158 @@
+# Path Items for /customers* — provisional
+# $ref: ./paths/customers.yaml#/customers | #/customerById
+
+customers:
+  get:
+    operationId: listCustomers
+    summary: Listar comercios / clientes
+    description: >
+      Lista comercios del distribuidor con filtros opcionales.
+      La demo MSW actualmente responde un array bare de `Commerce` con money
+      como string decimal (sin paginación ni MoneyAmount). Este contrato es la
+      forma provisional objetivo con página y MoneyAmount `{amount, currency}`.
+    tags: [Customers]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - CASHIER
+    parameters:
+      - $ref: '../parameters/common.yaml#/PageParam'
+      - $ref: '../parameters/common.yaml#/SizeParam'
+      - $ref: '../parameters/common.yaml#/SortParam'
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Busca por razón social, nombre de fantasía o CUIT.
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+    responses:
+      '200':
+        description: Página de comercios.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, page, size, totalItems, totalPages]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '../schemas/entities.yaml#/Commerce'
+                page:
+                  type: integer
+                size:
+                  type: integer
+                totalItems:
+                  type: integer
+                totalPages:
+                  type: integer
+            examples:
+              page0:
+                value:
+                  items:
+                    - id: com-el-puente
+                      businessName: Almacén El Puente S.R.L.
+                      tradeName: Almacén El Puente
+                      taxId: 30-71234567-8
+                      status: ACTIVE
+                      paymentTerms: Cuenta corriente 30 días
+                      creditLimit:
+                        amount: '500000.00'
+                        currency: ARS
+                      balance:
+                        amount: '87500.50'
+                        currency: ARS
+                      email: compras@elpuente.demo
+                      phone: '+54 11 4567-8901'
+                      address: Av. San Martín 1450, Villa Crespo, CABA
+                    - id: com-mercado-norte
+                      businessName: Mercado Norte S.A.
+                      tradeName: Mercado Norte
+                      taxId: 30-70998877-1
+                      status: ACTIVE
+                      paymentTerms: Contado / transferencia
+                      creditLimit:
+                        amount: '250000.00'
+                        currency: ARS
+                      balance:
+                        amount: '12000.00'
+                        currency: ARS
+                      email: pedidos@mercadonorte.demo
+                      phone: '+54 11 4789-1122'
+                      address: Cabrera 3200, Palermo, CABA
+                  page: 0
+                  size: 20
+                  totalItems: 4
+                  totalPages: 1
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'
+
+customerById:
+  parameters:
+    - name: customerId
+      in: path
+      required: true
+      schema:
+        $ref: '../schemas/common.yaml#/OpaqueId'
+      description: Identificador opaco del comercio.
+  get:
+    operationId: getCustomerById
+    summary: Obtener comercio por ID
+    description: >
+      Detalle de un comercio. Recursos fuera de alcance del tenant deben
+      responder 404 (política provisional de aislamiento).
+    tags: [Customers]
+    security:
+      - bearerAuth: []
+    x-contract-status: provisional
+    x-allowed-roles:
+      - DISTRIBUTOR_ADMIN
+      - SALES
+      - CASHIER
+      - COMMERCE_OWNER
+    responses:
+      '200':
+        description: Comercio encontrado.
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/entities.yaml#/Commerce'
+            examples:
+              elPuente:
+                value:
+                  id: com-el-puente
+                  businessName: Almacén El Puente S.R.L.
+                  tradeName: Almacén El Puente
+                  taxId: 30-71234567-8
+                  status: ACTIVE
+                  paymentTerms: Cuenta corriente 30 días
+                  creditLimit:
+                    amount: '500000.00'
+                    currency: ARS
+                  balance:
+                    amount: '87500.50'
+                    currency: ARS
+                  email: compras@elpuente.demo
+                  phone: '+54 11 4567-8901'
+                  address: Av. San Martín 1450, Villa Crespo, CABA
+      '401':
+        $ref: '../responses/errors.yaml#/Unauthorized'
+      '403':
+        $ref: '../responses/errors.yaml#/Forbidden'
+      '404':
+        $ref: '../responses/errors.yaml#/NotFound'
+      '500':
+        $ref: '../responses/errors.yaml#/InternalError'

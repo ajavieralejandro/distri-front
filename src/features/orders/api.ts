@@ -6,6 +6,8 @@ export type OrderListParams = {
   commerceId?: string;
   warehouseId?: string;
   routeId?: string;
+  priority?: string;
+  search?: string;
   signal?: AbortSignal;
 };
 
@@ -20,6 +22,8 @@ export function fetchOrders(params: OrderListParams = {}): Promise<Order[]> {
   if (params.commerceId) query.set('commerceId', params.commerceId);
   if (params.warehouseId) query.set('warehouseId', params.warehouseId);
   if (params.routeId) query.set('routeId', params.routeId);
+  if (params.priority) query.set('priority', params.priority);
+  if (params.search) query.set('search', params.search);
   const suffix = query.toString() ? `?${query.toString()}` : '';
   return httpClient.get<Order[]>(`/orders${suffix}`, { signal: params.signal });
 }

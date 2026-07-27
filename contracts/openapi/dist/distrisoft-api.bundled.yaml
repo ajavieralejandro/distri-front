@@ -1,0 +1,3891 @@
+openapi: 3.1.0
+info:
+  title: Distrisoft API
+  version: 0.1.0-provisional
+  summary: Provisional commercial API for Distrisoft
+  description: |
+    **PROVISIONAL — not a stable contract.**
+
+    Derived from the Distrisoft web demo (MSW handlers, feature clients, and types).
+    OpenAPI is the provisional source of truth for the future Spring Boot backend.
+
+    Important:
+    - UI roles adapt navigation only. Authorization is enforced by the API.
+    - Demo invoices/receipts have **no fiscal validity** (not ARCA-authorized).
+    - MSW currently returns bare arrays and string money; this contract targets
+      paginated list envelopes and `MoneyAmount` objects.
+    - See `contracts/decisions/` for open questions.
+
+    Traceability: `contracts/traceability.md`
+  license:
+    name: Proprietary
+    url: https://example.invalid/license
+servers:
+  - url: http://localhost:8080/api
+    description: Local Spring Boot (future)
+  - url: http://localhost:4010/api
+    description: OpenAPI mock (Prism)
+  - url: https://api-staging.example.invalid/api
+    description: Staging example only — not a real environment
+security:
+  - bearerAuth: []
+tags:
+  - name: System
+  - name: Authentication
+  - name: Current user
+  - name: Customers
+  - name: Products
+  - name: Orders
+  - name: Inventory
+  - name: Delivery
+  - name: Accounts
+  - name: Payments
+  - name: Billing
+  - name: Analytics
+  - name: Users
+  - name: Audit
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Estado del servicio
+      description: |
+        Health check público del API. No requiere autenticación. Nota: la demo MSW puede no exponer este endpoint con el mismo contrato; esta operación define la forma provisional objetivo.
+      tags:
+        - System
+      security: []
+      x-contract-status: provisional
+      x-allowed-roles: []
+      responses:
+        '200':
+          description: Servicio operativo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                ok:
+                  summary: API saludable
+                  value:
+                    status: ok
+                    service: distrisoft-api
+                    timestamp: '2026-07-25T16:05:00-03:00'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/login:
+    post:
+      operationId: login
+      summary: Iniciar sesión
+      description: |
+        Autentica con email y contraseña y devuelve un par de tokens más el usuario actual. Reemplaza el endpoint demo `POST /auth/demo/login`, que hoy responde solo con una sesión en memoria (sin JWT). Formato exacto del token: pendiente (ver decisions/authentication.md).
+      tags:
+        - Authentication
+      security: []
+      x-contract-status: provisional
+      x-allowed-roles: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              additionalProperties: false
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 1
+            examples:
+              adminDemo:
+                summary: Administrador distribuidor (ficticio)
+                value:
+                  email: admin@demo.distrisoft.local
+                  password: demo1234
+      responses:
+        '200':
+          description: Autenticación exitosa.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tokens
+                  - user
+                additionalProperties: false
+                properties:
+                  tokens:
+                    $ref: '#/components/schemas/TokenPair'
+                  user:
+                    $ref: '#/components/schemas/CurrentUser'
+              examples:
+                adminSession:
+                  summary: Sesión de administrador
+                  value:
+                    tokens:
+                      accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo-access
+                      refreshToken: opaque-refresh-token-demo
+                      tokenType: Bearer
+                      expiresIn: 3600
+                    user:
+                      userId: usr-admin
+                      role: DISTRIBUTOR_ADMIN
+                      displayName: Administrador Demo
+                      email: admin@demo.distrisoft.local
+                      distributorId: dist-1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/refresh:
+    post:
+      operationId: refreshTokens
+      summary: Renovar tokens
+      description: |
+        Intercambia un refresh token válido por un nuevo TokenPair. No existe en la demo MSW; es parte del contrato provisional para SPA.
+      tags:
+        - Authentication
+      security: []
+      x-contract-status: provisional
+      x-allowed-roles: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              additionalProperties: false
+              properties:
+                refreshToken:
+                  type: string
+                  minLength: 1
+            examples:
+              refresh:
+                value:
+                  refreshToken: opaque-refresh-token-demo
+      responses:
+        '200':
+          description: Tokens renovados.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+              examples:
+                renewed:
+                  value:
+                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo-access-2
+                    refreshToken: opaque-refresh-token-demo-rotated
+                    tokenType: Bearer
+                    expiresIn: 3600
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Cerrar sesión
+      description: |
+        Invalida el access/refresh token del servidor. La demo MSW responde 204 sin invalidación real (`POST /auth/demo/logout`).
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - CASHIER
+        - DRIVER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      responses:
+        '204':
+          description: Sesión cerrada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /auth/me:
+    get:
+      operationId: getAuthMe
+      summary: Usuario autenticado
+      description: |
+        Devuelve la identidad y alcance del caller según el token Bearer. Sustituye `GET /auth/demo/session?userId=...` de la demo.
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - CASHIER
+        - DRIVER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      responses:
+        '200':
+          description: Usuario actual.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+              examples:
+                salesUser:
+                  value:
+                    userId: usr-sales
+                    role: SALES
+                    displayName: Ventas Demo
+                    email: ventas@demo.distrisoft.local
+                    distributorId: dist-1
+                commerceOwner:
+                  value:
+                    userId: usr-commerce-owner
+                    role: COMMERCE_OWNER
+                    displayName: Dueño Comercio Demo
+                    email: comercio@demo.distrisoft.local
+                    distributorId: dist-1
+                    commerceId: com-el-puente
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/permissions:
+    get:
+      operationId: getMyPermissions
+      summary: Permisos efectivos del usuario
+      description: |
+        Lista los permisos efectivos del caller (RBAC de servidor). No existe en MSW; la demo calcula permisos solo en el cliente (`src/features/auth/permissions.ts`). Este contrato es la forma objetivo.
+      tags:
+        - Current user
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - CASHIER
+        - DRIVER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      responses:
+        '200':
+          description: Permisos del usuario autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - role
+                  - permissions
+                additionalProperties: false
+                properties:
+                  role:
+                    $ref: '#/components/schemas/DemoRole'
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+                      example: orders:create
+              examples:
+                salesPermissions:
+                  summary: Ventas
+                  value:
+                    role: SALES
+                    permissions:
+                      - analytics:view_global
+                      - customers:read
+                      - products:read
+                      - orders:create
+                      - orders:read_all
+                      - orders:confirm
+                      - orders:cancel
+                pickerPermissions:
+                  summary: Depósito
+                  value:
+                    role: WAREHOUSE_PICKER
+                    permissions:
+                      - products:read
+                      - orders:read_all
+                      - orders:prepare
+                      - inventory:read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /me/contexts:
+    get:
+      operationId: getMyContexts
+      summary: Contextos / alcances del usuario
+      description: |
+        Devuelve los alcances (distributor, commerce, warehouse, route) disponibles para el usuario autenticado. Provisional: la demo guarda estos campos en la sesión local sin endpoint dedicado.
+      tags:
+        - Current user
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - CASHIER
+        - DRIVER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      responses:
+        '200':
+          description: Contextos activos y disponibles.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - active
+                additionalProperties: false
+                properties:
+                  active:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      distributorId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      commerceId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      branchId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      warehouseId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      assignedRouteId:
+                        $ref: '#/components/schemas/OpaqueId'
+                  availableCommerces:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - tradeName
+                      properties:
+                        id:
+                          $ref: '#/components/schemas/OpaqueId'
+                        tradeName:
+                          type: string
+                  availableWarehouses:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - name
+                      properties:
+                        id:
+                          $ref: '#/components/schemas/OpaqueId'
+                        name:
+                          type: string
+                  availableRoutes:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - name
+                      properties:
+                        id:
+                          $ref: '#/components/schemas/OpaqueId'
+                        name:
+                          type: string
+              examples:
+                driverContext:
+                  summary: Chofer con ruta asignada
+                  value:
+                    active:
+                      distributorId: dist-1
+                      assignedRouteId: route-norte
+                    availableRoutes:
+                      - id: route-norte
+                        name: Recorrido Zona Norte — CABA
+                commerceBuyer:
+                  summary: Comprador de comercio
+                  value:
+                    active:
+                      distributorId: dist-1
+                      commerceId: com-el-puente
+                      branchId: br-el-puente-1
+                    availableCommerces:
+                      - id: com-el-puente
+                        tradeName: Almacén El Puente
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /customers:
+    get:
+      operationId: listCustomers
+      summary: Listar comercios / clientes
+      description: |
+        Lista comercios del distribuidor con filtros opcionales. La demo MSW actualmente responde un array bare de `Commerce` con money como string decimal (sin paginación ni MoneyAmount). Este contrato es la forma provisional objetivo con página y MoneyAmount `{amount, currency}`.
+      tags:
+        - Customers
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - CASHIER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Busca por razón social, nombre de fantasía o CUIT.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+      responses:
+        '200':
+          description: Página de comercios.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Commerce'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                page0:
+                  value:
+                    items:
+                      - id: com-el-puente
+                        businessName: Almacén El Puente S.R.L.
+                        tradeName: Almacén El Puente
+                        taxId: 30-71234567-8
+                        status: ACTIVE
+                        paymentTerms: Cuenta corriente 30 días
+                        creditLimit:
+                          amount: '500000.00'
+                          currency: ARS
+                        balance:
+                          amount: '87500.50'
+                          currency: ARS
+                        email: compras@elpuente.demo
+                        phone: +54 11 4567-8901
+                        address: Av. San Martín 1450, Villa Crespo, CABA
+                      - id: com-mercado-norte
+                        businessName: Mercado Norte S.A.
+                        tradeName: Mercado Norte
+                        taxId: 30-70998877-1
+                        status: ACTIVE
+                        paymentTerms: Contado / transferencia
+                        creditLimit:
+                          amount: '250000.00'
+                          currency: ARS
+                        balance:
+                          amount: '12000.00'
+                          currency: ARS
+                        email: pedidos@mercadonorte.demo
+                        phone: +54 11 4789-1122
+                        address: Cabrera 3200, Palermo, CABA
+                    page: 0
+                    size: 20
+                    totalItems: 4
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /customers/{customerId}:
+    parameters:
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+        description: Identificador opaco del comercio.
+    get:
+      operationId: getCustomerById
+      summary: Obtener comercio por ID
+      description: |
+        Detalle de un comercio. Recursos fuera de alcance del tenant deben responder 404 (política provisional de aislamiento).
+      tags:
+        - Customers
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - CASHIER
+        - COMMERCE_OWNER
+      responses:
+        '200':
+          description: Comercio encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Commerce'
+              examples:
+                elPuente:
+                  value:
+                    id: com-el-puente
+                    businessName: Almacén El Puente S.R.L.
+                    tradeName: Almacén El Puente
+                    taxId: 30-71234567-8
+                    status: ACTIVE
+                    paymentTerms: Cuenta corriente 30 días
+                    creditLimit:
+                      amount: '500000.00'
+                      currency: ARS
+                    balance:
+                      amount: '87500.50'
+                      currency: ARS
+                    email: compras@elpuente.demo
+                    phone: +54 11 4567-8901
+                    address: Av. San Martín 1450, Villa Crespo, CABA
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /products:
+    get:
+      operationId: listProducts
+      summary: Listar productos
+      description: |
+        Catálogo de productos del distribuidor. MSW demo responde un array bare con `price` como string; el contrato provisional usa paginación y MoneyAmount `{amount, currency: ARS}`.
+      tags:
+        - Products
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Busca por nombre, SKU o descripción.
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Página de productos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                bebidas:
+                  value:
+                    items:
+                      - id: prod-agua-15
+                        sku: BEB-001
+                        name: Agua mineral
+                        description: Agua mineral sin gas 1.5 L
+                        categoryId: cat-bebidas
+                        unit: UNIT
+                        presentation: Botella 1.5 L
+                        price:
+                          amount: '850.00'
+                          currency: ARS
+                        availableStock: 240
+                        active: true
+                      - id: prod-gaseosa-cola
+                        sku: BEB-014
+                        name: Gaseosa cola
+                        description: Pack x6 de 2.25 L
+                        categoryId: cat-bebidas
+                        unit: PACK
+                        presentation: Pack x6 2.25 L
+                        price:
+                          amount: '12500.50'
+                          currency: ARS
+                        availableStock: 48
+                        active: true
+                    page: 0
+                    size: 20
+                    totalItems: 2
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /products/{productId}:
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    get:
+      operationId: getProductById
+      summary: Obtener producto por ID
+      description: Detalle de un producto del catálogo.
+      tags:
+        - Products
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      responses:
+        '200':
+          description: Producto encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+              examples:
+                agua:
+                  value:
+                    id: prod-agua-15
+                    sku: BEB-001
+                    name: Agua mineral
+                    description: Agua mineral sin gas 1.5 L
+                    categoryId: cat-bebidas
+                    unit: UNIT
+                    presentation: Botella 1.5 L
+                    price:
+                      amount: '850.00'
+                      currency: ARS
+                    availableStock: 240
+                    active: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /categories:
+    get:
+      operationId: listCategories
+      summary: Listar categorías
+      description: |
+        Categorías del catálogo. MSW responde un array bare; el contrato provisional agrega envoltorio paginado para consistencia.
+      tags:
+        - Products
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Página de categorías.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                cats:
+                  value:
+                    items:
+                      - id: cat-bebidas
+                        name: Bebidas
+                      - id: cat-almacen
+                        name: Almacén
+                      - id: cat-limpieza
+                        name: Limpieza
+                    page: 0
+                    size: 20
+                    totalItems: 3
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /orders:
+    get:
+      operationId: listOrders
+      summary: Listar pedidos
+      description: |
+        Lista pedidos del alcance del caller (distribuidor o comercio propio). MSW demo responde un array bare con money como string y sin paginación. Este contrato es la forma provisional objetivo (página + MoneyAmount).
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - DRIVER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: commerceId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+        - name: warehouseId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+        - name: routeId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '200':
+          description: Página de pedidos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                pendingPage:
+                  value:
+                    items:
+                      - id: ord-1001
+                        number: PED-1001
+                        commerceId: com-el-puente
+                        branchId: br-el-puente-1
+                        warehouseId: wh-1
+                        status: PENDING
+                        priority: NORMAL
+                        createdAt: '2026-07-25T09:15:00-03:00'
+                        updatedAt: '2026-07-25T09:15:00-03:00'
+                        items:
+                          - productId: prod-agua-15
+                            sku: BEB-001
+                            name: Agua mineral
+                            unitPrice:
+                              amount: '850.00'
+                              currency: ARS
+                            quantity: 24
+                            lineTotal:
+                              amount: '20400.00'
+                              currency: ARS
+                            preparedQuantity: 0
+                            pickStatus: PENDING
+                            missingQuantity: 0
+                        subtotal:
+                          amount: '20400.00'
+                          currency: ARS
+                        total:
+                          amount: '20400.00'
+                          currency: ARS
+                        history:
+                          - id: ord-event-1001-1
+                            orderId: ord-1001
+                            toStatus: PENDING
+                            userId: usr-sales
+                            userDisplayName: Ventas Demo
+                            createdAt: '2026-07-25T09:15:00-03:00'
+                            note: Pedido creado
+                        deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                        deliveryContactName: Almacén El Puente
+                        deliveryContactPhone: +54 11 4567-8901
+                    page: 0
+                    size: 20
+                    totalItems: 1
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createOrder
+      summary: Crear pedido
+      description: |
+        Crea un pedido en estado PENDING y reserva stock. Requiere encabezado Idempotency-Key. Body: commerceId + items `[{productId, quantity}]`. MSW hoy no exige Idempotency-Key y usa money string; el contrato provisional usa MoneyAmount en la respuesta.
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - commerceId
+                - items
+              additionalProperties: false
+              properties:
+                commerceId:
+                  $ref: '#/components/schemas/OpaqueId'
+                notes:
+                  type: string
+                items:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - productId
+                      - quantity
+                    additionalProperties: false
+                    properties:
+                      productId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      quantity:
+                        type: integer
+                        minimum: 1
+            examples:
+              nuevoPedido:
+                value:
+                  commerceId: com-el-puente
+                  notes: Entregar antes del mediodía
+                  items:
+                    - productId: prod-agua-15
+                      quantity: 24
+                    - productId: prod-gaseosa-cola
+                      quantity: 6
+      responses:
+        '201':
+          description: Pedido creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                created:
+                  value:
+                    id: ord-1002
+                    number: PED-1002
+                    commerceId: com-el-puente
+                    warehouseId: wh-1
+                    status: PENDING
+                    priority: NORMAL
+                    createdAt: '2026-07-25T10:02:00-03:00'
+                    updatedAt: '2026-07-25T10:02:00-03:00'
+                    notes: Entregar antes del mediodía
+                    items:
+                      - productId: prod-agua-15
+                        sku: BEB-001
+                        name: Agua mineral
+                        unitPrice:
+                          amount: '850.00'
+                          currency: ARS
+                        quantity: 24
+                        lineTotal:
+                          amount: '20400.00'
+                          currency: ARS
+                        preparedQuantity: 0
+                        pickStatus: PENDING
+                        missingQuantity: 0
+                    subtotal:
+                      amount: '20400.00'
+                      currency: ARS
+                    total:
+                      amount: '20400.00'
+                      currency: ARS
+                    history:
+                      - id: ord-event-1002-1
+                        orderId: ord-1002
+                        toStatus: PENDING
+                        userId: usr-sales
+                        userDisplayName: Ventas Demo
+                        createdAt: '2026-07-25T10:02:00-03:00'
+                        note: Pedido creado
+                    deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                    deliveryContactName: Almacén El Puente
+                    deliveryContactPhone: +54 11 4567-8901
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    get:
+      operationId: getOrderById
+      summary: Obtener pedido por ID
+      description: Detalle completo del pedido incluyendo ítems e historial.
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - DRIVER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      responses:
+        '200':
+          description: Pedido encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                preparing:
+                  value:
+                    id: ord-1001
+                    number: PED-1001
+                    commerceId: com-el-puente
+                    warehouseId: wh-1
+                    status: PREPARING
+                    priority: HIGH
+                    createdAt: '2026-07-25T09:15:00-03:00'
+                    updatedAt: '2026-07-25T11:20:00-03:00'
+                    items:
+                      - productId: prod-agua-15
+                        sku: BEB-001
+                        name: Agua mineral
+                        unitPrice:
+                          amount: '850.00'
+                          currency: ARS
+                        quantity: 24
+                        lineTotal:
+                          amount: '20400.00'
+                          currency: ARS
+                        preparedQuantity: 20
+                        pickStatus: PICKED
+                        missingQuantity: 4
+                        itemNote: Faltan 4 unidades en rack B
+                    subtotal:
+                      amount: '20400.00'
+                      currency: ARS
+                    total:
+                      amount: '20400.00'
+                      currency: ARS
+                    history:
+                      - id: ord-event-1001-1
+                        orderId: ord-1001
+                        toStatus: PENDING
+                        userId: usr-sales
+                        userDisplayName: Ventas Demo
+                        createdAt: '2026-07-25T09:15:00-03:00'
+                      - id: ord-event-1001-2
+                        orderId: ord-1001
+                        fromStatus: PENDING
+                        toStatus: CONFIRMED
+                        userId: usr-sales
+                        userDisplayName: Ventas Demo
+                        createdAt: '2026-07-25T09:40:00-03:00'
+                      - id: ord-event-1001-3
+                        orderId: ord-1001
+                        fromStatus: CONFIRMED
+                        toStatus: PREPARING
+                        userId: usr-picker
+                        userDisplayName: Depósito Demo
+                        createdAt: '2026-07-25T11:00:00-03:00'
+                    deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                    deliveryContactName: Almacén El Puente
+                    deliveryContactPhone: +54 11 4567-8901
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /orders/{orderId}/status:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    patch:
+      operationId: updateOrderStatus
+      summary: Actualizar estado del pedido
+      description: |
+        Cambia el estado del pedido respetando transiciones válidas. Body: `{ status }`. Transiciones inválidas → 409 Conflict (provisional; MSW hoy suele responder 400).
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - DRIVER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              additionalProperties: false
+              properties:
+                status:
+                  $ref: '#/components/schemas/OrderStatus'
+            examples:
+              confirm:
+                value:
+                  status: CONFIRMED
+              cancel:
+                value:
+                  status: CANCELLED
+      responses:
+        '200':
+          description: Pedido actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                confirmed:
+                  value:
+                    id: ord-1001
+                    number: PED-1001
+                    commerceId: com-el-puente
+                    warehouseId: wh-1
+                    status: CONFIRMED
+                    priority: NORMAL
+                    createdAt: '2026-07-25T09:15:00-03:00'
+                    updatedAt: '2026-07-25T09:40:00-03:00'
+                    items: []
+                    subtotal:
+                      amount: '20400.00'
+                      currency: ARS
+                    total:
+                      amount: '20400.00'
+                      currency: ARS
+                    history: []
+                    deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                    deliveryContactName: Almacén El Puente
+                    deliveryContactPhone: +54 11 4567-8901
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /orders/{orderId}/prepare-items:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    patch:
+      operationId: prepareOrderItems
+      summary: Actualizar preparación de ítems
+      description: |
+        Actualiza cantidades preparadas y estado de picking por ítem. Body: `{ items: [{ productId, preparedQuantity, pickStatus, ... }] }`.
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - WAREHOUSE_PICKER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+              additionalProperties: false
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - productId
+                      - preparedQuantity
+                      - pickStatus
+                    additionalProperties: false
+                    properties:
+                      productId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      preparedQuantity:
+                        type: integer
+                        minimum: 0
+                      pickStatus:
+                        $ref: '#/components/schemas/PickItemStatus'
+                      missingQuantity:
+                        type: integer
+                        minimum: 0
+                      substituteProductId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      itemNote:
+                        type: string
+            examples:
+              pickPartial:
+                value:
+                  items:
+                    - productId: prod-agua-15
+                      preparedQuantity: 20
+                      pickStatus: PICKED
+                      missingQuantity: 4
+                      itemNote: Faltan 4 en rack B
+                    - productId: prod-gaseosa-cola
+                      preparedQuantity: 6
+                      pickStatus: PICKED
+                      missingQuantity: 0
+      responses:
+        '200':
+          description: Ítems de preparación actualizados.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /orders/{orderId}/ready-for-dispatch:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    post:
+      operationId: markOrderReadyForDispatch
+      summary: Marcar pedido listo para despacho
+      description: |
+        Transiciona el pedido a READY_FOR_DISPATCH cuando todos los ítems dejaron de estar PENDING. Sin body.
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - WAREHOUSE_PICKER
+      responses:
+        '200':
+          description: Pedido listo para despacho.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                ready:
+                  value:
+                    id: ord-1001
+                    number: PED-1001
+                    commerceId: com-el-puente
+                    warehouseId: wh-1
+                    status: READY_FOR_DISPATCH
+                    priority: NORMAL
+                    createdAt: '2026-07-25T09:15:00-03:00'
+                    updatedAt: '2026-07-25T12:05:00-03:00'
+                    items: []
+                    subtotal:
+                      amount: '20400.00'
+                      currency: ARS
+                    total:
+                      amount: '20400.00'
+                      currency: ARS
+                    history: []
+                    deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                    deliveryContactName: Almacén El Puente
+                    deliveryContactPhone: +54 11 4567-8901
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /orders/{orderId}/delivery:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    patch:
+      operationId: reportOrderDelivery
+      summary: Reportar resultado de entrega
+      description: |
+        Registra el resultado de la entrega en ruta. Body: `{ result, observation?, receivedByName? }`. Resultados exitosos (`DELIVERED_OK`, `PARTIAL_DEMO`) → DELIVERED; el resto → DELIVERY_FAILED.
+      tags:
+        - Orders
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - DRIVER
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - result
+              additionalProperties: false
+              properties:
+                result:
+                  $ref: '#/components/schemas/DeliveryResult'
+                observation:
+                  type: string
+                receivedByName:
+                  type: string
+            examples:
+              deliveredOk:
+                value:
+                  result: DELIVERED_OK
+                  receivedByName: María López
+                  observation: Entregado en mostrador
+              customerAbsent:
+                value:
+                  result: CUSTOMER_ABSENT
+                  observation: Nadie atendió en el local a las 14:30
+      responses:
+        '200':
+          description: Resultado de entrega registrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                delivered:
+                  value:
+                    id: ord-1001
+                    number: PED-1001
+                    commerceId: com-el-puente
+                    warehouseId: wh-1
+                    routeId: route-norte
+                    status: DELIVERED
+                    priority: NORMAL
+                    createdAt: '2026-07-25T09:15:00-03:00'
+                    updatedAt: '2026-07-25T14:35:00-03:00'
+                    items: []
+                    subtotal:
+                      amount: '20400.00'
+                      currency: ARS
+                    total:
+                      amount: '20400.00'
+                      currency: ARS
+                    history: []
+                    deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                    deliveryContactName: Almacén El Puente
+                    deliveryContactPhone: +54 11 4567-8901
+                    deliveryResult: DELIVERED_OK
+                    deliveryObservation: Entregado en mostrador
+                    receivedByName: María López
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /inventory:
+    get:
+      operationId: listInventory
+      summary: Listar inventario
+      description: |
+        Stock por producto y depósito. MSW responde un array bare sin paginación; el contrato provisional usa envoltorio paginado.
+      tags:
+        - Inventory
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - WAREHOUSE_PICKER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Busca por nombre o SKU del producto.
+        - name: warehouseId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+        - name: lowStock
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Si true, solo ítems en o bajo el umbral de stock bajo.
+      responses:
+        '200':
+          description: Página de inventario.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryItem'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                warehouse1:
+                  value:
+                    items:
+                      - id: inv-agua-wh1
+                        productId: prod-agua-15
+                        warehouseId: wh-1
+                        physicalStock: 280
+                        reservedStock: 40
+                        availableStock: 240
+                        lowStockThreshold: 50
+                      - id: inv-cola-wh1
+                        productId: prod-gaseosa-cola
+                        warehouseId: wh-1
+                        physicalStock: 60
+                        reservedStock: 12
+                        availableStock: 48
+                        lowStockThreshold: 20
+                    page: 0
+                    size: 20
+                    totalItems: 2
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /inventory/adjust:
+    post:
+      operationId: adjustInventory
+      summary: Ajustar stock
+      description: |
+        Ajuste manual de inventario (entrada/salida) con motivo obligatorio. `quantity` puede ser negativo. No puede dejar stock físico menor al reservado.
+      tags:
+        - Inventory
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+                - warehouseId
+                - quantity
+                - reason
+              additionalProperties: false
+              properties:
+                productId:
+                  $ref: '#/components/schemas/OpaqueId'
+                warehouseId:
+                  $ref: '#/components/schemas/OpaqueId'
+                quantity:
+                  type: integer
+                  description: Delta de unidades (positivo o negativo).
+                reason:
+                  type: string
+                  minLength: 1
+                  example: Ajuste por inventario físico julio 2026
+            examples:
+              entrada:
+                value:
+                  productId: prod-agua-15
+                  warehouseId: wh-1
+                  quantity: 48
+                  reason: Ingreso de remito REM-7788 proveedor Aguas del Sur
+              salida:
+                value:
+                  productId: prod-gaseosa-cola
+                  warehouseId: wh-1
+                  quantity: -3
+                  reason: Merma por envases dañados en picking
+      responses:
+        '201':
+          description: Ajuste aplicado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - item
+                  - movement
+                additionalProperties: false
+                properties:
+                  item:
+                    $ref: '#/components/schemas/InventoryItem'
+                  movement:
+                    type: object
+                    required:
+                      - id
+                      - productId
+                      - warehouseId
+                      - quantity
+                      - reason
+                      - createdAt
+                      - simulated
+                    properties:
+                      id:
+                        $ref: '#/components/schemas/OpaqueId'
+                      productId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      warehouseId:
+                        $ref: '#/components/schemas/OpaqueId'
+                      quantity:
+                        type: integer
+                      reason:
+                        type: string
+                      createdAt:
+                        $ref: '#/components/schemas/IsoDateTime'
+                      simulated:
+                        type: boolean
+                        const: true
+                      userId:
+                        $ref: '#/components/schemas/OpaqueId'
+              examples:
+                adjusted:
+                  value:
+                    item:
+                      id: inv-agua-wh1
+                      productId: prod-agua-15
+                      warehouseId: wh-1
+                      physicalStock: 328
+                      reservedStock: 40
+                      availableStock: 288
+                      lowStockThreshold: 50
+                    movement:
+                      id: imv-42
+                      productId: prod-agua-15
+                      warehouseId: wh-1
+                      quantity: 48
+                      reason: Ingreso de remito REM-7788 proveedor Aguas del Sur
+                      createdAt: '2026-07-25T15:10:00-03:00'
+                      simulated: true
+                      userId: usr-admin
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /delivery/routes:
+    get:
+      operationId: listDeliveryRoutes
+      summary: Listar rutas de reparto
+      description: |
+        Rutas de entrega del distribuidor. MSW responde un array bare; el contrato provisional usa envoltorio paginado.
+      tags:
+        - Delivery
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - DRIVER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Página de rutas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeliveryRoute'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                routes:
+                  value:
+                    items:
+                      - id: route-norte
+                        name: Recorrido Zona Norte — CABA
+                        driverUserId: usr-driver
+                        vehicleId: veh-fiorino-1
+                        status: PLANNED
+                      - id: route-oeste
+                        name: Recorrido Zona Oeste — GBA
+                        driverUserId: usr-driver
+                        vehicleId: veh-utilitario-2
+                        status: IN_PROGRESS
+                        startedAt: '2026-07-25T08:00:00-03:00'
+                    page: 0
+                    size: 20
+                    totalItems: 2
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /delivery/routes/{routeId}:
+    parameters:
+      - name: routeId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    get:
+      operationId: getDeliveryRouteById
+      summary: Obtener ruta con pedidos
+      description: |
+        Detalle de la ruta e ítems/pedidos asignados. MSW responde `{ route, orders }` (orders como array bare).
+      tags:
+        - Delivery
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - DRIVER
+      responses:
+        '200':
+          description: Ruta y pedidos asociados.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - route
+                  - orders
+                additionalProperties: false
+                properties:
+                  route:
+                    $ref: '#/components/schemas/DeliveryRoute'
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+              examples:
+                norte:
+                  value:
+                    route:
+                      id: route-norte
+                      name: Recorrido Zona Norte — CABA
+                      driverUserId: usr-driver
+                      vehicleId: veh-fiorino-1
+                      status: PLANNED
+                    orders:
+                      - id: ord-1001
+                        number: PED-1001
+                        commerceId: com-el-puente
+                        warehouseId: wh-1
+                        routeId: route-norte
+                        status: OUT_FOR_DELIVERY
+                        priority: NORMAL
+                        stopSequence: 1
+                        createdAt: '2026-07-25T09:15:00-03:00'
+                        updatedAt: '2026-07-25T13:00:00-03:00'
+                        items: []
+                        subtotal:
+                          amount: '20400.00'
+                          currency: ARS
+                        total:
+                          amount: '20400.00'
+                          currency: ARS
+                        history: []
+                        deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                        deliveryContactName: Almacén El Puente
+                        deliveryContactPhone: +54 11 4567-8901
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /delivery/routes/{routeId}/start:
+    parameters:
+      - name: routeId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    post:
+      operationId: startDeliveryRoute
+      summary: Iniciar recorrido
+      description: |
+        Marca la ruta como IN_PROGRESS y setea `startedAt`. Sin body.
+      tags:
+        - Delivery
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - DRIVER
+      responses:
+        '200':
+          description: Ruta iniciada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryRoute'
+              examples:
+                started:
+                  value:
+                    id: route-norte
+                    name: Recorrido Zona Norte — CABA
+                    driverUserId: usr-driver
+                    vehicleId: veh-fiorino-1
+                    status: IN_PROGRESS
+                    startedAt: '2026-07-25T08:05:00-03:00'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /accounts/{commerceId}/summary:
+    parameters:
+      - name: commerceId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    get:
+      operationId: getAccountSummary
+      summary: Resumen de cuenta corriente
+      description: |
+        Saldo, límite y crédito disponible del comercio. MSW usa money string; el contrato provisional usa MoneyAmount ARS.
+      tags:
+        - Accounts
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+        - COMMERCE_OWNER
+      responses:
+        '200':
+          description: Resumen de cuenta.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountSummary'
+              examples:
+                elPuente:
+                  value:
+                    balance:
+                      amount: '87500.50'
+                      currency: ARS
+                    creditLimit:
+                      amount: '500000.00'
+                      currency: ARS
+                    availableCredit:
+                      amount: '412499.50'
+                      currency: ARS
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /accounts/{commerceId}/movements:
+    parameters:
+      - name: commerceId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    get:
+      operationId: listAccountMovements
+      summary: Movimientos de cuenta corriente
+      description: |
+        Historial de movimientos (facturas, pagos, notas de crédito, ajustes). MSW responde array bare con money string; contrato provisional pagina y usa MoneyAmount.
+      tags:
+        - Accounts
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+        - COMMERCE_OWNER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+      responses:
+        '200':
+          description: Página de movimientos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AccountMovement'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                movements:
+                  value:
+                    items:
+                      - id: acc-101
+                        commerceId: com-el-puente
+                        type: INVOICE
+                        description: Factura demo PED-1001
+                        amount:
+                          amount: '20400.00'
+                          currency: ARS
+                        balanceAfter:
+                          amount: '87500.50'
+                          currency: ARS
+                        dueDate: '2026-08-24'
+                        createdAt: '2026-07-25T14:40:00-03:00'
+                        reference: DEMO-FC-000012
+                        status: OPEN
+                      - id: acc-100
+                        commerceId: com-el-puente
+                        type: PAYMENT
+                        description: Pago de demo recibido
+                        amount:
+                          amount: '15000.00'
+                          currency: ARS
+                        balanceAfter:
+                          amount: '67100.50'
+                          currency: ARS
+                        createdAt: '2026-07-24T17:20:00-03:00'
+                        reference: PAG-DEMO-015
+                        status: PAID
+                    page: 0
+                    size: 20
+                    totalItems: 2
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /payments:
+    get:
+      operationId: listPayments
+      summary: Listar pagos
+      description: |
+        Pagos registrados (simulados). MSW responde array bare con `amount` string; el contrato provisional pagina y usa MoneyAmount `{amount, currency: ARS}`.
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+        - COMMERCE_OWNER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: commerceId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+        - name: method
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaymentMethod'
+      responses:
+        '200':
+          description: Página de pagos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                paymentsPage:
+                  value:
+                    items:
+                      - id: pay-15
+                        commerceId: com-el-puente
+                        amount:
+                          amount: '15000.00'
+                          currency: ARS
+                        method: TRANSFER
+                        status: COMPLETED
+                        createdAt: '2026-07-24T17:20:00-03:00'
+                        reference: PAG-DEMO-015
+                        simulated: true
+                        recordedByUserId: usr-cashier
+                    page: 0
+                    size: 20
+                    totalItems: 1
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createPayment
+      summary: Registrar pago
+      description: |
+        Registra un pago simulado y genera recibo demo. Requiere Idempotency-Key. Body usa MoneyAmount (no string). MSW hoy acepta `amount` string y `clientOperationId` (deprecated a favor del header).
+      tags:
+        - Payments
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+        - COMMERCE_OWNER
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - commerceId
+                - amount
+                - method
+              additionalProperties: false
+              properties:
+                commerceId:
+                  $ref: '#/components/schemas/OpaqueId'
+                amount:
+                  $ref: '#/components/schemas/MoneyAmount'
+                method:
+                  $ref: '#/components/schemas/PaymentMethod'
+                reference:
+                  type: string
+                  description: Referencia externa opcional (p. ej. CBU / MP).
+            examples:
+              transferencia:
+                value:
+                  commerceId: com-el-puente
+                  amount:
+                    amount: '25000.00'
+                    currency: ARS
+                  method: TRANSFER
+                  reference: TRANSF-BNA-998877
+              efectivo:
+                value:
+                  commerceId: com-mercado-norte
+                  amount:
+                    amount: '5000.00'
+                    currency: ARS
+                  method: CASH
+      responses:
+        '200':
+          description: Pago ya existente para la misma Idempotency-Key.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '201':
+          description: Pago creado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+              examples:
+                created:
+                  value:
+                    id: pay-16
+                    commerceId: com-el-puente
+                    amount:
+                      amount: '25000.00'
+                      currency: ARS
+                    method: TRANSFER
+                    status: COMPLETED
+                    createdAt: '2026-07-25T16:00:00-03:00'
+                    reference: PAG-DEMO-016
+                    simulated: true
+                    recordedByUserId: usr-cashier
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /invoices:
+    get:
+      operationId: listInvoices
+      summary: Listar facturas demo
+      description: |
+        Facturas demostrativas sin validez fiscal (ARCA). MSW responde array bare con money string; contrato provisional pagina y usa MoneyAmount.
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+        - COMMERCE_OWNER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: commerceId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '200':
+          description: Página de facturas.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                invoices:
+                  value:
+                    items:
+                      - id: inv-12
+                        number: DEMO-FC-000012
+                        commerceId: com-el-puente
+                        orderId: ord-1001
+                        status: ISSUED_DEMO
+                        issuedAt: '2026-07-25T14:45:00-03:00'
+                        dueAt: '2026-08-24T23:59:59-03:00'
+                        subtotal:
+                          amount: '20400.00'
+                          currency: ARS
+                        tax:
+                          amount: '0.00'
+                          currency: ARS
+                        total:
+                          amount: '20400.00'
+                          currency: ARS
+                        items: []
+                        disclaimer: DOCUMENTO DEMOSTRATIVO — SIN VALIDEZ FISCAL — NO AUTORIZADO POR ARCA
+                    page: 0
+                    size: 20
+                    totalItems: 1
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createInvoice
+      summary: Crear factura demo (borrador)
+      description: |
+        Crea una factura DRAFT a partir de un pedido DELIVERED. Sin validez fiscal. Body: `{ orderId }`.
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+              additionalProperties: false
+              properties:
+                orderId:
+                  $ref: '#/components/schemas/OpaqueId'
+            examples:
+              fromOrder:
+                value:
+                  orderId: ord-1001
+      responses:
+        '201':
+          description: Factura borrador creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+              examples:
+                draft:
+                  value:
+                    id: inv-13
+                    number: DEMO-FC-000013
+                    commerceId: com-el-puente
+                    orderId: ord-1001
+                    status: DRAFT
+                    subtotal:
+                      amount: '20400.00'
+                      currency: ARS
+                    tax:
+                      amount: '0.00'
+                      currency: ARS
+                    total:
+                      amount: '20400.00'
+                      currency: ARS
+                    items: []
+                    disclaimer: DOCUMENTO DEMOSTRATIVO — SIN VALIDEZ FISCAL — NO AUTORIZADO POR ARCA
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /invoices/{invoiceId}/issue:
+    parameters:
+      - name: invoiceId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    post:
+      operationId: issueInvoice
+      summary: Emitir factura demo
+      description: |
+        Pasa la factura a ISSUED_DEMO y setea `issuedAt`. Sin validez fiscal ARCA.
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+      responses:
+        '200':
+          description: Factura emitida (demo).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+              examples:
+                issued:
+                  value:
+                    id: inv-13
+                    number: DEMO-FC-000013
+                    commerceId: com-el-puente
+                    orderId: ord-1001
+                    status: ISSUED_DEMO
+                    issuedAt: '2026-07-25T15:00:00-03:00'
+                    dueAt: '2026-08-24T23:59:59-03:00'
+                    subtotal:
+                      amount: '20400.00'
+                      currency: ARS
+                    tax:
+                      amount: '0.00'
+                      currency: ARS
+                    total:
+                      amount: '20400.00'
+                      currency: ARS
+                    items: []
+                    disclaimer: DOCUMENTO DEMOSTRATIVO — SIN VALIDEZ FISCAL — NO AUTORIZADO POR ARCA
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /invoices/{invoiceId}/cancel:
+    parameters:
+      - name: invoiceId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    post:
+      operationId: cancelInvoice
+      summary: Anular factura demo
+      description: Marca la factura como CANCELLED_DEMO. Sin efecto fiscal real.
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+      responses:
+        '200':
+          description: Factura anulada (demo).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+              examples:
+                cancelled:
+                  value:
+                    id: inv-13
+                    number: DEMO-FC-000013
+                    commerceId: com-el-puente
+                    orderId: ord-1001
+                    status: CANCELLED_DEMO
+                    subtotal:
+                      amount: '20400.00'
+                      currency: ARS
+                    tax:
+                      amount: '0.00'
+                      currency: ARS
+                    total:
+                      amount: '20400.00'
+                      currency: ARS
+                    items: []
+                    disclaimer: DOCUMENTO DEMOSTRATIVO — SIN VALIDEZ FISCAL — NO AUTORIZADO POR ARCA
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /receipts:
+    get:
+      operationId: listReceipts
+      summary: Listar recibos demo
+      description: |
+        Recibos demostrativos asociados a pagos. No existe listado en MSW aún (los recibos se crean al registrar pagos); este contrato define la forma provisional con paginación y MoneyAmount.
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+        - COMMERCE_OWNER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: commerceId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '200':
+          description: Página de recibos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Receipt'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                receipts:
+                  value:
+                    items:
+                      - id: rcp-15
+                        number: DEMO-RC-000015
+                        commerceId: com-el-puente
+                        paymentId: pay-15
+                        issuedAt: '2026-07-24T17:20:00-03:00'
+                        amount:
+                          amount: '15000.00'
+                          currency: ARS
+                        paymentMethod: TRANSFER
+                        allocations:
+                          - description: Pago registrado en demo
+                            amount:
+                              amount: '15000.00'
+                              currency: ARS
+                        disclaimer: RECIBO DEMOSTRATIVO — SIN VALIDEZ FISCAL
+                    page: 0
+                    size: 20
+                    totalItems: 1
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /receipts/{receiptId}:
+    parameters:
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    get:
+      operationId: getReceiptById
+      summary: Obtener recibo demo por ID
+      description: Detalle de un recibo demostrativo sin validez fiscal.
+      tags:
+        - Billing
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - CASHIER
+        - COMMERCE_OWNER
+      responses:
+        '200':
+          description: Recibo encontrado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+              examples:
+                receipt:
+                  value:
+                    id: rcp-15
+                    number: DEMO-RC-000015
+                    commerceId: com-el-puente
+                    paymentId: pay-15
+                    issuedAt: '2026-07-24T17:20:00-03:00'
+                    amount:
+                      amount: '15000.00'
+                      currency: ARS
+                    paymentMethod: TRANSFER
+                    allocations:
+                      - description: Pago registrado en demo
+                        amount:
+                          amount: '15000.00'
+                          currency: ARS
+                    disclaimer: RECIBO DEMOSTRATIVO — SIN VALIDEZ FISCAL
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /analytics/admin:
+    get:
+      operationId: getAdminAnalytics
+      summary: Analytics global del distribuidor
+      description: |
+        Totales agregados para el panel admin. MSW hoy usa strings para contadores e importes; el contrato provisional tipa contadores como integer y montos como MoneyAmount ARS.
+      tags:
+        - Analytics
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+      responses:
+        '200':
+          description: Analytics admin.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - totals
+                additionalProperties: false
+                properties:
+                  totals:
+                    type: object
+                    required:
+                      - orders
+                      - deliveredOrders
+                      - orderValue
+                      - payments
+                      - availableStock
+                    additionalProperties: false
+                    properties:
+                      orders:
+                        type: integer
+                        minimum: 0
+                      deliveredOrders:
+                        type: integer
+                        minimum: 0
+                      orderValue:
+                        $ref: '#/components/schemas/MoneyAmount'
+                      payments:
+                        $ref: '#/components/schemas/MoneyAmount'
+                      availableStock:
+                        type: integer
+                        minimum: 0
+              examples:
+                adminTotals:
+                  value:
+                    totals:
+                      orders: 42
+                      deliveredOrders: 28
+                      orderValue:
+                        amount: '1850400.50'
+                        currency: ARS
+                      payments:
+                        amount: '920000.00'
+                        currency: ARS
+                      availableStock: 1840
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /analytics/commerce/{commerceId}:
+    parameters:
+      - name: commerceId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/OpaqueId'
+    get:
+      operationId: getCommerceAnalytics
+      summary: Analytics de un comercio
+      description: |
+        Totales agregados filtrados por comercio. Alcance propio para COMMERCE_OWNER; global para roles de distribuidor.
+      tags:
+        - Analytics
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - COMMERCE_OWNER
+      responses:
+        '200':
+          description: Analytics del comercio.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - commerceId
+                  - totals
+                additionalProperties: false
+                properties:
+                  commerceId:
+                    $ref: '#/components/schemas/OpaqueId'
+                  totals:
+                    type: object
+                    required:
+                      - orders
+                      - deliveredOrders
+                      - orderValue
+                      - payments
+                      - availableStock
+                    additionalProperties: false
+                    properties:
+                      orders:
+                        type: integer
+                        minimum: 0
+                      deliveredOrders:
+                        type: integer
+                        minimum: 0
+                      orderValue:
+                        $ref: '#/components/schemas/MoneyAmount'
+                      payments:
+                        $ref: '#/components/schemas/MoneyAmount'
+                      availableStock:
+                        type: integer
+                        minimum: 0
+              examples:
+                elPuente:
+                  value:
+                    commerceId: com-el-puente
+                    totals:
+                      orders: 12
+                      deliveredOrders: 9
+                      orderValue:
+                        amount: '245800.00'
+                        currency: ARS
+                      payments:
+                        amount: '158300.50'
+                        currency: ARS
+                      availableStock: 1840
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      summary: Dashboard operativo admin
+      description: |
+        Resumen operativo: pedidos pendientes/preparación, productos en stock bajo, saldo pendiente y pedidos recientes. MSW usa money string en `totalOutstandingBalance`; el contrato provisional usa MoneyAmount.
+      tags:
+        - Analytics
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+      responses:
+        '200':
+          description: Datos del dashboard.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - pendingOrders
+                  - preparingOrders
+                  - lowStockProducts
+                  - totalOutstandingBalance
+                  - recentOrders
+                additionalProperties: false
+                properties:
+                  pendingOrders:
+                    type: integer
+                    minimum: 0
+                  preparingOrders:
+                    type: integer
+                    minimum: 0
+                  lowStockProducts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  totalOutstandingBalance:
+                    $ref: '#/components/schemas/MoneyAmount'
+                  recentOrders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+              examples:
+                dashboard:
+                  value:
+                    pendingOrders: 5
+                    preparingOrders: 3
+                    lowStockProducts:
+                      - id: prod-gaseosa-cola
+                        sku: BEB-014
+                        name: Gaseosa cola
+                        description: Pack x6 de 2.25 L
+                        categoryId: cat-bebidas
+                        unit: PACK
+                        presentation: Pack x6 2.25 L
+                        price:
+                          amount: '12500.50'
+                          currency: ARS
+                        availableStock: 12
+                        active: true
+                    totalOutstandingBalance:
+                      amount: '312450.75'
+                      currency: ARS
+                    recentOrders:
+                      - id: ord-1001
+                        number: PED-1001
+                        commerceId: com-el-puente
+                        warehouseId: wh-1
+                        status: PENDING
+                        priority: NORMAL
+                        createdAt: '2026-07-25T09:15:00-03:00'
+                        updatedAt: '2026-07-25T09:15:00-03:00'
+                        items: []
+                        subtotal:
+                          amount: '20400.00'
+                          currency: ARS
+                        total:
+                          amount: '20400.00'
+                          currency: ARS
+                        history: []
+                        deliveryAddress: Av. San Martín 1450, Villa Crespo, CABA
+                        deliveryContactName: Almacén El Puente
+                        deliveryContactPhone: +54 11 4567-8901
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /users:
+    get:
+      operationId: listUsers
+      summary: Listar usuarios demo
+      description: |
+        Usuarios visibles según rol (admin del distribuidor o dueño de comercio). MSW responde array bare sin paginación; el contrato provisional pagina. No incluye contraseñas ni secretos.
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+        - COMMERCE_OWNER
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: role
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/DemoRole'
+      responses:
+        '200':
+          description: Página de usuarios.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserSummary'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                usersPage:
+                  value:
+                    items:
+                      - id: usr-admin
+                        email: admin@demo.distrisoft.local
+                        displayName: Administrador Demo
+                        role: DISTRIBUTOR_ADMIN
+                        distributorId: dist-1
+                      - id: usr-sales
+                        email: ventas@demo.distrisoft.local
+                        displayName: Ventas Demo
+                        role: SALES
+                        distributorId: dist-1
+                      - id: usr-picker
+                        email: deposito@demo.distrisoft.local
+                        displayName: Depósito Demo
+                        role: WAREHOUSE_PICKER
+                        distributorId: dist-1
+                        warehouseId: wh-1
+                      - id: usr-cashier
+                        email: caja@demo.distrisoft.local
+                        displayName: Caja Demo
+                        role: CASHIER
+                        distributorId: dist-1
+                      - id: usr-driver
+                        email: reparto@demo.distrisoft.local
+                        displayName: Reparto Demo
+                        role: DRIVER
+                        distributorId: dist-1
+                        assignedRouteId: route-norte
+                    page: 0
+                    size: 20
+                    totalItems: 5
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /audit:
+    get:
+      operationId: listAuditEvents
+      summary: Listar eventos de auditoría
+      description: |
+        Eventos de auditoría demo (cambios de estado, pagos, facturas, entregas). MSW responde array bare; el contrato provisional pagina.
+      tags:
+        - Audit
+      security:
+        - bearerAuth: []
+      x-contract-status: provisional
+      x-allowed-roles:
+        - DISTRIBUTOR_ADMIN
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            type: string
+            example: order
+        - name: entityId
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OpaqueId'
+      responses:
+        '200':
+          description: Página de eventos.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - page
+                  - size
+                  - totalItems
+                  - totalPages
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditEvent'
+                  page:
+                    type: integer
+                  size:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  totalPages:
+                    type: integer
+              examples:
+                events:
+                  value:
+                    items:
+                      - id: aud-201
+                        userId: usr-cashier
+                        userDisplayName: Caja Demo
+                        action: PAYMENT_RECORDED
+                        entityType: payment
+                        entityId: pay-15
+                        createdAt: '2026-07-24T17:20:00-03:00'
+                        summary: Pago PAG-DEMO-015 registrado.
+                      - id: aud-200
+                        userId: usr-driver
+                        userDisplayName: Reparto Demo
+                        action: DELIVERY_REPORTED
+                        entityType: order
+                        entityId: ord-0998
+                        createdAt: '2026-07-24T16:05:00-03:00'
+                        summary: 'Resultado de entrega: DELIVERED_OK.'
+                      - id: aud-199
+                        userId: usr-admin
+                        userDisplayName: Administrador Demo
+                        action: ORDER_STATUS_CHANGED
+                        entityType: order
+                        entityId: ord-0998
+                        createdAt: '2026-07-24T12:10:00-03:00'
+                        summary: 'Pedido PED-0998: READY_FOR_DISPATCH a OUT_FOR_DELIVERY.'
+                    page: 0
+                    size: 20
+                    totalItems: 3
+                    totalPages: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Autenticación provisional Bearer. El formato exacto del token (JWT u otro) está pendiente — ver decisions/authentication.md. La UI demo actual NO usa este esquema; usa sesión en sessionStorage.
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Página cero-indexada (provisional).
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    SortParam:
+      name: sort
+      in: query
+      required: false
+      schema:
+        type: string
+        example: createdAt,desc
+      description: Campo y dirección. Convención provisional.
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: |
+        Clave de idempotencia para operaciones sensibles. Si se repite con el mismo payload, la API debe devolver el mismo resultado sin duplicar efectos. Ver decisions/idempotency.md.
+  schemas:
+    MoneyAmount:
+      type: object
+      required:
+        - amount
+        - currency
+      additionalProperties: false
+      properties:
+        amount:
+          type: string
+          description: Decimal string with up to 2 fraction digits. Never float/double.
+          pattern: ^\d+(\.\d{1,2})?$
+          example: '12500.50'
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          example: ARS
+      x-contract-status: provisional
+    OpaqueId:
+      type: string
+      minLength: 1
+      maxLength: 64
+      description: Opaque string identifier (UUID preferred for new resources).
+      example: 550e8400-e29b-41d4-a716-446655440000
+      x-contract-status: provisional
+    IsoDateTime:
+      type: string
+      format: date-time
+      description: ISO 8601 timestamp. Timezone policy is pending (see decisions/dates-and-timezones.md).
+      example: '2026-07-25T18:30:00-03:00'
+    IsoDate:
+      type: string
+      format: date
+      example: '2026-07-25'
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+        rejectedValue:
+          description: Optional rejected value for debugging (never secrets).
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+        - status
+        - traceId
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          example: ORDER_INVALID_STATE
+        message:
+          type: string
+          example: El pedido no puede confirmarse desde su estado actual.
+        status:
+          type: integer
+          example: 409
+        traceId:
+          type: string
+          example: opaque-trace-id
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+      x-contract-status: provisional
+    PageMeta:
+      type: object
+      required:
+        - page
+        - size
+        - totalItems
+        - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 0
+          example: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        totalItems:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+      x-contract-status: provisional
+    DemoRole:
+      type: string
+      enum:
+        - DISTRIBUTOR_ADMIN
+        - SALES
+        - WAREHOUSE_PICKER
+        - CASHIER
+        - DRIVER
+        - COMMERCE_OWNER
+        - COMMERCE_BUYER
+        - COMMERCE_CASHIER
+      description: |
+        Roles used by the demo UX. Backend will enforce authorization; the UI only adapts navigation and visible actions.
+    OrderStatus:
+      type: string
+      enum:
+        - PENDING
+        - CONFIRMED
+        - PREPARING
+        - READY_FOR_DISPATCH
+        - OUT_FOR_DELIVERY
+        - DELIVERED
+        - CANCELLED
+        - DELIVERY_FAILED
+    PickItemStatus:
+      type: string
+      enum:
+        - PENDING
+        - PICKED
+        - MISSING
+        - SUBSTITUTED_DEMO
+    PaymentMethod:
+      type: string
+      enum:
+        - CASH
+        - TRANSFER
+        - CARD
+        - MERCADO_PAGO_DEMO
+    PaymentStatus:
+      type: string
+      enum:
+        - PENDING
+        - COMPLETED
+        - FAILED
+    DeliveryResult:
+      type: string
+      enum:
+        - DELIVERED_OK
+        - CUSTOMER_ABSENT
+        - WRONG_ADDRESS
+        - REJECTED
+        - PARTIAL_DEMO
+    InvoiceStatus:
+      type: string
+      enum:
+        - DRAFT
+        - ISSUED_DEMO
+        - CANCELLED_DEMO
+      description: Demo invoices have NO fiscal validity (ARCA).
+    Commerce:
+      type: object
+      required:
+        - id
+        - businessName
+        - tradeName
+        - taxId
+        - status
+        - creditLimit
+        - balance
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        businessName:
+          type: string
+          example: Almacén Los Andes S.R.L.
+        tradeName:
+          type: string
+          example: Los Andes
+        taxId:
+          type: string
+          example: 30-71234567-8
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+        paymentTerms:
+          type: string
+          example: Cuenta corriente 30 días
+        creditLimit:
+          $ref: '#/components/schemas/MoneyAmount'
+        balance:
+          $ref: '#/components/schemas/MoneyAmount'
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        address:
+          type: string
+    Product:
+      type: object
+      required:
+        - id
+        - sku
+        - name
+        - categoryId
+        - unit
+        - price
+        - availableStock
+        - active
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        sku:
+          type: string
+          example: BEB-001
+        name:
+          type: string
+          example: Agua mineral
+        description:
+          type: string
+        categoryId:
+          $ref: '#/components/schemas/OpaqueId'
+        unit:
+          type: string
+          enum:
+            - UNIT
+            - PACK
+            - BOX
+        presentation:
+          type: string
+          example: Botella 1.5 L
+        price:
+          $ref: '#/components/schemas/MoneyAmount'
+        availableStock:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+    Category:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        name:
+          type: string
+          example: Bebidas
+    OrderItem:
+      type: object
+      required:
+        - productId
+        - sku
+        - name
+        - unitPrice
+        - quantity
+        - lineTotal
+        - preparedQuantity
+        - pickStatus
+      properties:
+        productId:
+          $ref: '#/components/schemas/OpaqueId'
+        sku:
+          type: string
+        name:
+          type: string
+        unitPrice:
+          $ref: '#/components/schemas/MoneyAmount'
+        quantity:
+          type: integer
+          minimum: 1
+        lineTotal:
+          $ref: '#/components/schemas/MoneyAmount'
+        preparedQuantity:
+          type: integer
+          minimum: 0
+        pickStatus:
+          $ref: '#/components/schemas/PickItemStatus'
+        missingQuantity:
+          type: integer
+          minimum: 0
+        substituteProductId:
+          $ref: '#/components/schemas/OpaqueId'
+        itemNote:
+          type: string
+    OrderStatusEvent:
+      type: object
+      required:
+        - id
+        - orderId
+        - toStatus
+        - userId
+        - userDisplayName
+        - createdAt
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        orderId:
+          $ref: '#/components/schemas/OpaqueId'
+        fromStatus:
+          $ref: '#/components/schemas/OrderStatus'
+        toStatus:
+          $ref: '#/components/schemas/OrderStatus'
+        userId:
+          $ref: '#/components/schemas/OpaqueId'
+        userDisplayName:
+          type: string
+        createdAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        note:
+          type: string
+    Order:
+      type: object
+      required:
+        - id
+        - number
+        - commerceId
+        - warehouseId
+        - status
+        - priority
+        - createdAt
+        - updatedAt
+        - items
+        - subtotal
+        - total
+        - history
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        number:
+          type: string
+          example: PED-1001
+        commerceId:
+          $ref: '#/components/schemas/OpaqueId'
+        branchId:
+          $ref: '#/components/schemas/OpaqueId'
+        warehouseId:
+          $ref: '#/components/schemas/OpaqueId'
+        routeId:
+          $ref: '#/components/schemas/OpaqueId'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        priority:
+          type: string
+          enum:
+            - NORMAL
+            - HIGH
+        createdAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        updatedAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        subtotal:
+          $ref: '#/components/schemas/MoneyAmount'
+        total:
+          $ref: '#/components/schemas/MoneyAmount'
+        notes:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderStatusEvent'
+        deliveryAddress:
+          type: string
+        deliveryContactName:
+          type: string
+        deliveryContactPhone:
+          type: string
+        deliveryWindow:
+          type: string
+        stopSequence:
+          type: integer
+        deliveryResult:
+          $ref: '#/components/schemas/DeliveryResult'
+        deliveryObservation:
+          type: string
+        receivedByName:
+          type: string
+    Payment:
+      type: object
+      required:
+        - id
+        - commerceId
+        - amount
+        - method
+        - status
+        - createdAt
+        - simulated
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        commerceId:
+          $ref: '#/components/schemas/OpaqueId'
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        method:
+          $ref: '#/components/schemas/PaymentMethod'
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        createdAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        reference:
+          type: string
+        simulated:
+          type: boolean
+          const: true
+        clientOperationId:
+          type: string
+          deprecated: true
+          description: Demo field. Prefer Idempotency-Key header.
+        recordedByUserId:
+          $ref: '#/components/schemas/OpaqueId'
+    Invoice:
+      type: object
+      required:
+        - id
+        - number
+        - commerceId
+        - orderId
+        - status
+        - subtotal
+        - tax
+        - total
+        - items
+        - disclaimer
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        number:
+          type: string
+          example: DEMO-FC-000001
+        commerceId:
+          $ref: '#/components/schemas/OpaqueId'
+        orderId:
+          $ref: '#/components/schemas/OpaqueId'
+        issuedAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        dueAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        subtotal:
+          $ref: '#/components/schemas/MoneyAmount'
+        tax:
+          $ref: '#/components/schemas/MoneyAmount'
+        total:
+          $ref: '#/components/schemas/MoneyAmount'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        disclaimer:
+          type: string
+          example: DOCUMENTO DEMOSTRATIVO — SIN VALIDEZ FISCAL — NO AUTORIZADO POR ARCA
+    Receipt:
+      type: object
+      required:
+        - id
+        - number
+        - commerceId
+        - paymentId
+        - issuedAt
+        - amount
+        - paymentMethod
+        - disclaimer
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        number:
+          type: string
+          example: DEMO-RC-000001
+        commerceId:
+          $ref: '#/components/schemas/OpaqueId'
+        paymentId:
+          $ref: '#/components/schemas/OpaqueId'
+        issuedAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        allocations:
+          type: array
+          items:
+            type: object
+            required:
+              - description
+              - amount
+            properties:
+              invoiceId:
+                $ref: '#/components/schemas/OpaqueId'
+              description:
+                type: string
+              amount:
+                $ref: '#/components/schemas/MoneyAmount'
+        disclaimer:
+          type: string
+          example: RECIBO DEMOSTRATIVO — SIN VALIDEZ FISCAL
+    CurrentUser:
+      type: object
+      required:
+        - userId
+        - role
+        - displayName
+        - email
+      properties:
+        userId:
+          $ref: '#/components/schemas/OpaqueId'
+        role:
+          $ref: '#/components/schemas/DemoRole'
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        distributorId:
+          $ref: '#/components/schemas/OpaqueId'
+        commerceId:
+          $ref: '#/components/schemas/OpaqueId'
+        branchId:
+          $ref: '#/components/schemas/OpaqueId'
+        warehouseId:
+          $ref: '#/components/schemas/OpaqueId'
+        assignedRouteId:
+          $ref: '#/components/schemas/OpaqueId'
+    TokenPair:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+          description: Provisional bearer token. Format TBD (see decisions/authentication.md).
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          description: Seconds until access token expiry.
+          example: 3600
+      x-contract-status: provisional
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+        - timestamp
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: distrisoft-api
+        timestamp:
+          $ref: '#/components/schemas/IsoDateTime'
+    InventoryItem:
+      type: object
+      required:
+        - id
+        - productId
+        - warehouseId
+        - physicalStock
+        - reservedStock
+        - availableStock
+        - lowStockThreshold
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        productId:
+          $ref: '#/components/schemas/OpaqueId'
+        warehouseId:
+          $ref: '#/components/schemas/OpaqueId'
+        physicalStock:
+          type: integer
+        reservedStock:
+          type: integer
+        availableStock:
+          type: integer
+        lowStockThreshold:
+          type: integer
+    DeliveryRoute:
+      type: object
+      required:
+        - id
+        - name
+        - driverUserId
+        - vehicleId
+        - status
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        name:
+          type: string
+        driverUserId:
+          $ref: '#/components/schemas/OpaqueId'
+        vehicleId:
+          $ref: '#/components/schemas/OpaqueId'
+        status:
+          type: string
+          enum:
+            - PLANNED
+            - IN_PROGRESS
+            - COMPLETED
+        startedAt:
+          $ref: '#/components/schemas/IsoDateTime'
+    AccountSummary:
+      type: object
+      required:
+        - balance
+        - creditLimit
+        - availableCredit
+      properties:
+        balance:
+          $ref: '#/components/schemas/MoneyAmount'
+        creditLimit:
+          $ref: '#/components/schemas/MoneyAmount'
+        availableCredit:
+          $ref: '#/components/schemas/MoneyAmount'
+    AccountMovement:
+      type: object
+      required:
+        - id
+        - commerceId
+        - type
+        - description
+        - amount
+        - balanceAfter
+        - createdAt
+        - reference
+        - status
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        commerceId:
+          $ref: '#/components/schemas/OpaqueId'
+        type:
+          type: string
+          enum:
+            - INVOICE
+            - PAYMENT
+            - CREDIT_NOTE
+            - ADJUSTMENT
+        description:
+          type: string
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        balanceAfter:
+          $ref: '#/components/schemas/MoneyAmount'
+        dueDate:
+          $ref: '#/components/schemas/IsoDate'
+        createdAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        reference:
+          type: string
+        status:
+          type: string
+          enum:
+            - OPEN
+            - PAID
+            - OVERDUE
+            - CANCELLED
+    AuditEvent:
+      type: object
+      required:
+        - id
+        - userId
+        - userDisplayName
+        - action
+        - entityType
+        - entityId
+        - createdAt
+        - summary
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        userId:
+          $ref: '#/components/schemas/OpaqueId'
+        userDisplayName:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          $ref: '#/components/schemas/OpaqueId'
+        createdAt:
+          $ref: '#/components/schemas/IsoDateTime'
+        summary:
+          type: string
+    UserSummary:
+      type: object
+      required:
+        - id
+        - email
+        - displayName
+        - role
+      properties:
+        id:
+          $ref: '#/components/schemas/OpaqueId'
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          $ref: '#/components/schemas/DemoRole'
+        distributorId:
+          $ref: '#/components/schemas/OpaqueId'
+        commerceId:
+          $ref: '#/components/schemas/OpaqueId'
+        warehouseId:
+          $ref: '#/components/schemas/OpaqueId'
+        assignedRouteId:
+          $ref: '#/components/schemas/OpaqueId'
+  responses:
+    BadRequest:
+      description: Solicitud inválida.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: BAD_REQUEST
+            message: La solicitud no es válida.
+            status: 400
+            traceId: opaque-trace-id
+            details: []
+    Unauthorized:
+      description: Autenticación requerida o token inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: UNAUTHORIZED
+            message: Autenticación requerida.
+            status: 401
+            traceId: opaque-trace-id
+            details: []
+    Forbidden:
+      description: Autenticado pero sin permiso o fuera de alcance.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: FORBIDDEN
+            message: No tenés permiso para esta operación.
+            status: 403
+            traceId: opaque-trace-id
+            details: []
+    NotFound:
+      description: Recurso inexistente (o oculto por política de aislamiento).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: NOT_FOUND
+            message: Recurso no encontrado.
+            status: 404
+            traceId: opaque-trace-id
+            details: []
+    Conflict:
+      description: Conflicto de estado o de negocio.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: ORDER_INVALID_STATE
+            message: El pedido no puede confirmarse desde su estado actual.
+            status: 409
+            traceId: opaque-trace-id
+            details: []
+    UnprocessableEntity:
+      description: Payload semánticamente inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: VALIDATION_ERROR
+            message: Uno o más campos no son válidos.
+            status: 422
+            traceId: opaque-trace-id
+            details:
+              - field: items
+                issue: Debe incluir al menos un producto.
+    TooManyRequests:
+      description: Límite de tasa excedido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: RATE_LIMITED
+            message: Demasiadas solicitudes. Reintentá más tarde.
+            status: 429
+            traceId: opaque-trace-id
+            details: []
+    InternalError:
+      description: Error interno.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: INTERNAL_ERROR
+            message: Error interno del servidor.
+            status: 500
+            traceId: opaque-trace-id
+            details: []
