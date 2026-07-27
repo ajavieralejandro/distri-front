@@ -120,7 +120,9 @@ export function OperationalMap({
 
   if (failed) {
     return (
-      <MapFallback locations={locations.filter((l) => visibleTypes.has(l.type))} />
+      <MapFallback
+        locations={locations.filter((l) => visibleTypes.has(l.type))}
+      />
     );
   }
 
@@ -142,7 +144,10 @@ function MapFallback({ locations }: { locations: MapLocation[] }) {
       </p>
       <ul className="space-y-2 text-sm">
         {locations.map((location) => (
-          <li key={location.id} className="rounded bg-white px-3 py-2 shadow-sm">
+          <li
+            key={location.id}
+            className="rounded bg-white px-3 py-2 shadow-sm"
+          >
             <p className="font-medium">{location.name}</p>
             <p className="text-slate-600">
               {TYPE_LABELS[location.type]} · {location.address}

@@ -1,7 +1,4 @@
-export function formatDateTime(
-  value: string,
-  locale = 'es-AR',
-): string {
+export function formatDateTime(value: string, locale = 'es-AR'): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;

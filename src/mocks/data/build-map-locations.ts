@@ -61,9 +61,7 @@ export function buildMapLocations(database: DemoDatabase): MapLocation[] {
       lat: geo.lat,
       lng: geo.lng,
       statusLabel: 'Sucursal de comercio',
-      href: commerce
-        ? `/admin/customers/${commerce.id}`
-        : '/admin/customers',
+      href: commerce ? `/admin/customers/${commerce.id}` : '/admin/customers',
     });
   }
 

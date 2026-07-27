@@ -10,7 +10,8 @@ import type {
   PickItemStatus,
 } from '@/shared/types/demo';
 
-export const orderStatusLabels: Record<OrderStatus, string> = ORDER_STATUS_LABELS;
+export const orderStatusLabels: Record<OrderStatus, string> =
+  ORDER_STATUS_LABELS;
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
   CASH: 'Efectivo',

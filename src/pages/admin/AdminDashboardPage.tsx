@@ -152,7 +152,9 @@ export function AdminDashboardPage() {
                     <p className="mt-1 text-2xl font-semibold text-slate-900">
                       {metric.value}
                     </p>
-                    <p className="mt-2 text-xs text-teal-800">{metric.hint} →</p>
+                    <p className="mt-2 text-xs text-teal-800">
+                      {metric.hint} →
+                    </p>
                   </Link>
                 ))}
               </div>
@@ -166,8 +168,8 @@ export function AdminDashboardPage() {
                       Requiere atención
                     </h2>
                     <p className="text-sm text-amber-900">
-                      Hay {data.recentAlertCount} alertas activas (stock, demoras,
-                      cobranzas o incidencias).
+                      Hay {data.recentAlertCount} alertas activas (stock,
+                      demoras, cobranzas o incidencias).
                     </p>
                   </div>
                   <Link

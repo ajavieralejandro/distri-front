@@ -107,7 +107,9 @@ export function OrderDetailPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm text-slate-500">Depósito responsable</dt>
+                  <dt className="text-sm text-slate-500">
+                    Depósito responsable
+                  </dt>
                   <dd>
                     {WAREHOUSE_NAMES[order.warehouseId] ?? order.warehouseId}
                   </dd>
@@ -185,7 +187,9 @@ export function OrderDetailPage() {
               </ul>
               <div className="mt-3 border-t pt-3 text-sm">
                 <p>Subtotal: {formatMoney(order.subtotal)}</p>
-                <p className="font-semibold">Total: {formatMoney(order.total)}</p>
+                <p className="font-semibold">
+                  Total: {formatMoney(order.total)}
+                </p>
                 <p className="mt-1 text-xs text-slate-500">
                   Impuestos simulados no discriminados en esta demo.
                 </p>

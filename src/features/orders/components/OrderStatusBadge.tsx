@@ -11,6 +11,9 @@ type OrderStatusBadgeProps = {
 
 export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
   return (
-    <StatusBadge label={orderStatusLabel(status)} tone={orderStatusTone(status)} />
+    <StatusBadge
+      label={orderStatusLabel(status)}
+      tone={orderStatusTone(status)}
+    />
   );
 }

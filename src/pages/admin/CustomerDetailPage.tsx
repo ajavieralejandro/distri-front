@@ -20,12 +20,7 @@ import { formatMoney } from '@/shared/lib/money';
 import { usePaymentsQuery } from '@/features/payments/hooks';
 import { compareMoney, sumMoney } from '@/shared/lib/decimal';
 
-type TabId =
-  | 'resumen'
-  | 'pedidos'
-  | 'cuenta'
-  | 'pagos'
-  | 'ubicacion';
+type TabId = 'resumen' | 'pedidos' | 'cuenta' | 'pagos' | 'ubicacion';
 
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: 'resumen', label: 'Resumen' },
@@ -79,7 +74,9 @@ export function CustomerDetailPage() {
             <section className="rounded-lg bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xl font-semibold">{customer.businessName}</p>
+                  <p className="text-xl font-semibold">
+                    {customer.businessName}
+                  </p>
                   <p className="text-sm text-slate-600">{customer.tradeName}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <StatusBadge
@@ -92,10 +89,7 @@ export function CustomerDetailPage() {
                     />
                     {compareMoney(customer.balance, customer.creditLimit) >
                     0 ? (
-                      <StatusBadge
-                        label="Crédito excedido"
-                        tone="danger"
-                      />
+                      <StatusBadge label="Crédito excedido" tone="danger" />
                     ) : null}
                   </div>
                 </div>
@@ -149,7 +143,9 @@ export function CustomerDetailPage() {
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-slate-500">Condición de pago</dt>
+                    <dt className="text-sm text-slate-500">
+                      Condición de pago
+                    </dt>
                     <dd>{customer.paymentTerms}</dd>
                   </div>
                   <div>
@@ -157,7 +153,9 @@ export function CustomerDetailPage() {
                     <dd>{formatMoney(customer.balance)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-slate-500">Límite de crédito</dt>
+                    <dt className="text-sm text-slate-500">
+                      Límite de crédito
+                    </dt>
                     <dd>{formatMoney(customer.creditLimit)}</dd>
                   </div>
                   <div>

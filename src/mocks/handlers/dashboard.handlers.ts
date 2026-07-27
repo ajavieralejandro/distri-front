@@ -58,8 +58,7 @@ export const dashboardHandlers = [
       .slice(0, 5);
 
     const pendingCollections = database.accountMovements.filter(
-      (movement) =>
-        movement.status === 'OPEN' || movement.status === 'OVERDUE',
+      (movement) => movement.status === 'OPEN' || movement.status === 'OVERDUE',
     ).length;
 
     const delayedDeliveries = database.orders.filter(

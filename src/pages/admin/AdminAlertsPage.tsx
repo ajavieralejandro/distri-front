@@ -14,14 +14,12 @@ import type {
   AdminAlertType,
 } from '@/shared/types/admin-ops';
 
-const severityTone: Record<
-  AdminAlertSeverity,
-  'info' | 'warning' | 'danger'
-> = {
-  info: 'info',
-  warning: 'warning',
-  critical: 'danger',
-};
+const severityTone: Record<AdminAlertSeverity, 'info' | 'warning' | 'danger'> =
+  {
+    info: 'info',
+    warning: 'warning',
+    critical: 'danger',
+  };
 
 const typeLabels: Record<AdminAlertType, string> = {
   LOW_STOCK: 'Stock bajo',

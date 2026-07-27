@@ -60,7 +60,8 @@ export function buildAdminAlerts(database: DemoDatabase): AdminAlert[] {
     }
 
     if (
-      (order.status === 'OUT_FOR_DELIVERY' || order.status === 'READY_FOR_DISPATCH') &&
+      (order.status === 'OUT_FOR_DELIVERY' ||
+        order.status === 'READY_FOR_DISPATCH') &&
       now - new Date(order.updatedAt).getTime() > 2 * DAY_MS
     ) {
       alerts.push({
@@ -168,7 +169,7 @@ export function buildAdminAlerts(database: DemoDatabase): AdminAlert[] {
     }
   }
 
-  return alerts.sort(
-    (left, right) => right.createdAt.localeCompare(left.createdAt),
+  return alerts.sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt),
   );
 }

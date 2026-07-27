@@ -109,7 +109,10 @@ export function InventoryPage() {
           ['Sin stock', summary.empty],
           ['Unidades reservadas', summary.reserved],
         ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-lg bg-white p-3 shadow-sm">
+          <div
+            key={String(label)}
+            className="rounded-lg bg-white p-3 shadow-sm"
+          >
             <p className="text-xs text-slate-500">{label}</p>
             <p className="text-xl font-semibold">{value}</p>
           </div>

@@ -18,11 +18,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 export type OrderStatusTone =
-  | 'neutral'
-  | 'success'
-  | 'warning'
-  | 'danger'
-  | 'info';
+  'neutral' | 'success' | 'warning' | 'danger' | 'info';
 
 export const ORDER_STATUS_TONES: Record<OrderStatus, OrderStatusTone> = {
   PENDING: 'warning',
