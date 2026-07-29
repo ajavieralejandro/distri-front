@@ -27,7 +27,10 @@ export function LoginHeroPanel() {
         pedidos, cobranzas y mapa comercial en una demo lista para recorrer.
       </p>
 
-      <div aria-hidden="true" className="mt-8 grid grid-cols-2 gap-3 sm:max-w-md">
+      <div
+        aria-hidden="true"
+        className="mt-8 grid grid-cols-2 gap-3 sm:max-w-md"
+      >
         {['Pedidos', 'Catálogo', 'Mapa', 'Cuentas'].map((label) => (
           <div
             key={label}

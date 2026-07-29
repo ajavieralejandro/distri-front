@@ -1,4 +1,7 @@
-import { getCredentialsForRole, getRolePresentation } from './role-presentation';
+import {
+  getCredentialsForRole,
+  getRolePresentation,
+} from './role-presentation';
 
 /**
  * Profiles shown on the public demo login.

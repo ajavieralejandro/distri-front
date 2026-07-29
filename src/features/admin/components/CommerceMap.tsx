@@ -83,7 +83,9 @@ export function CommerceMap({ items, selectedId, onSelect }: CommerceMapProps) {
 
       if (items.length > 0) {
         const bounds = L.latLngBounds(
-          items.map((item) => [item.latitude, item.longitude] as [number, number]),
+          items.map(
+            (item) => [item.latitude, item.longitude] as [number, number],
+          ),
         );
         mapRef.current.fitBounds(bounds.pad(0.25));
       }
@@ -106,11 +108,10 @@ export function CommerceMap({ items, selectedId, onSelect }: CommerceMapProps) {
   if (failed) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-        No se pudo cargar el mapa. Usá el listado lateral para explorar comercios.
+        No se pudo cargar el mapa. Usá el listado lateral para explorar
+        comercios.
         {items[0] ? (
-          <p className="mt-2">
-            Deuda ejemplo: {formatMoney(items[0].debt)}
-          </p>
+          <p className="mt-2">Deuda ejemplo: {formatMoney(items[0].debt)}</p>
         ) : null}
       </div>
     );

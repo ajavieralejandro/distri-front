@@ -48,7 +48,10 @@ export function CommerceDashboardPage() {
         <section className="rounded-xl bg-white p-4 shadow-sm lg:col-span-2">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold">Pedido en curso</h2>
-            <Link to="/commerce/cart" className="text-sm text-teal-800 underline">
+            <Link
+              to="/commerce/cart"
+              className="text-sm text-teal-800 underline"
+            >
               Ver pedido
             </Link>
           </div>
@@ -98,7 +101,10 @@ export function CommerceDashboardPage() {
         <section className="rounded-xl bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-semibold">Últimos pedidos</h2>
-            <Link to="/commerce/orders" className="text-sm text-teal-800 underline">
+            <Link
+              to="/commerce/orders"
+              className="text-sm text-teal-800 underline"
+            >
               Ver todos
             </Link>
           </div>

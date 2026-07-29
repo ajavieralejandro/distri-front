@@ -33,9 +33,7 @@ export function CommerceProfilePage() {
                 <p className="text-slate-600">{query.data.tradeName}</p>
               </div>
               <StatusBadge
-                label={
-                  query.data.status === 'ACTIVE' ? 'Activo' : 'Inactivo'
-                }
+                label={query.data.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}
                 tone={query.data.status === 'ACTIVE' ? 'success' : 'neutral'}
               />
             </div>

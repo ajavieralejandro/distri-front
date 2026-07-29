@@ -96,11 +96,7 @@ export type Product = {
 
 export type CommerceStatus = 'ACTIVE' | 'INACTIVE';
 
-export type CommerceType =
-  | 'ALMACEN'
-  | 'KIOSCO'
-  | 'AUTOSERVICIO'
-  | 'MAYORISTA';
+export type CommerceType = 'ALMACEN' | 'KIOSCO' | 'AUTOSERVICIO' | 'MAYORISTA';
 
 export type CommerceZone = 'CENTRO' | 'NORTE' | 'SUR' | 'OESTE';
 

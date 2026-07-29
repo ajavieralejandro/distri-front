@@ -49,9 +49,7 @@ describe('simplified demo login', () => {
       screen.getByRole('button', { name: 'Entrar como comercio' }),
     );
 
-    await waitFor(() =>
-      expect(readDemoSession()?.role).toBe('COMMERCE_OWNER'),
-    );
+    await waitFor(() => expect(readDemoSession()?.role).toBe('COMMERCE_OWNER'));
   });
 
   it('supports manual form login for commerce', async () => {
@@ -78,8 +76,6 @@ describe('simplified demo login', () => {
     await user.type(screen.getByLabelText('Contraseña'), 'demo1234');
     await user.click(screen.getByRole('button', { name: 'Ingresar' }));
 
-    await waitFor(() =>
-      expect(readDemoSession()?.role).toBe('COMMERCE_OWNER'),
-    );
+    await waitFor(() => expect(readDemoSession()?.role).toBe('COMMERCE_OWNER'));
   });
 });
