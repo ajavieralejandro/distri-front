@@ -81,15 +81,28 @@ export type Product = {
   name: string;
   description: string;
   categoryId: string;
+  brand: string;
   unit: ProductUnit;
   presentation: string;
   price: string;
+  wholesalePrice?: string;
   availableStock: number;
   imageUrl?: string;
   active: boolean;
+  featured?: boolean;
+  offer?: boolean;
+  isNew?: boolean;
 };
 
 export type CommerceStatus = 'ACTIVE' | 'INACTIVE';
+
+export type CommerceType =
+  | 'ALMACEN'
+  | 'KIOSCO'
+  | 'AUTOSERVICIO'
+  | 'MAYORISTA';
+
+export type CommerceZone = 'CENTRO' | 'NORTE' | 'SUR' | 'OESTE';
 
 export type Commerce = {
   id: string;
@@ -103,6 +116,13 @@ export type Commerce = {
   email: string;
   phone: string;
   address: string;
+  city: string;
+  zone: CommerceZone;
+  commerceType: CommerceType;
+  tags: string[];
+  latitude: number;
+  longitude: number;
+  lastOrderAt?: string;
 };
 
 export type CommerceBranch = {
@@ -337,7 +357,7 @@ export type DemoFeatureFlags = {
 };
 
 export type DemoDatabase = {
-  version: 2;
+  version: 3;
   distributorId: string;
   categories: Category[];
   products: Product[];

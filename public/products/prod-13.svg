@@ -1,0 +1,6 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#fef2f2"/>
+  <rect x="255" y="115" width="130" height="240" rx="18" fill="#f87171"/>
+  <rect x="275" y="140" width="90" height="80" rx="8" fill="#fecaca"/>
+  <text x="320" y="440" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="26" fill="#0f172a" font-weight="600">Cerveza 0.0</text>
+</svg>

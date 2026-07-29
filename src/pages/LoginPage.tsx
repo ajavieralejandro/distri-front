@@ -1,23 +1,15 @@
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate } from 'react-router-dom';
 
 import { env } from '@/app/config/env';
-import { DemoExperienceTabs } from '@/features/auth/components/DemoExperienceTabs';
-import { DemoQuickAccess } from '@/features/auth/components/DemoQuickAccess';
-import { DemoRoleCard } from '@/features/auth/components/DemoRoleCard';
-import { DemoRoleDetails } from '@/features/auth/components/DemoRoleDetails';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { LoginHeroPanel } from '@/features/auth/components/LoginHeroPanel';
 import { useDemoSession, useLoginMutation } from '@/features/auth/hooks';
+import { LOGIN_PROFILE_CARDS } from '@/features/auth/login-profiles';
 import { getHomePath } from '@/features/auth/permissions';
-import {
-  getCredentialsForRole,
-  getRolePresentation,
-  getRolesByCategory,
-  type DemoRoleCategory,
-} from '@/features/auth/role-presentation';
+import { getCredentialsForRole } from '@/features/auth/role-presentation';
 import { loginSchema, type LoginFormValues } from '@/features/auth/schemas';
 import type { DemoRole } from '@/shared/types/demo';
 
@@ -26,9 +18,9 @@ export function LoginPage() {
   const navigate = useNavigate();
   const login = useLoginMutation();
   const submittingRef = useRef(false);
-  const [category, setCategory] = useState<DemoRoleCategory>('DISTRIBUTOR');
   const [selectedRole, setSelectedRole] =
     useState<DemoRole>('DISTRIBUTOR_ADMIN');
+  const [showManual, setShowManual] = useState(false);
 
   const {
     register,
@@ -42,13 +34,6 @@ export function LoginPage() {
       password: '',
     },
   });
-
-  const rolesInCategory = useMemo(
-    () => getRolesByCategory(category),
-    [category],
-  );
-  const selectedPresentation =
-    getRolePresentation(selectedRole) ?? rolesInCategory[0]!;
 
   if (session && env.isMockDataSource) {
     return <Navigate to={getHomePath(session.role)} replace />;
@@ -79,6 +64,16 @@ export function LoginPage() {
     });
   };
 
+  const enterAsRole = (role: DemoRole) => {
+    const credentials = getCredentialsForRole(role);
+    if (!credentials || login.isPending || submittingRef.current) return;
+    setSelectedRole(role);
+    authenticate({
+      email: credentials.email,
+      password: credentials.password,
+    });
+  };
+
   const fillCredentials = (role: DemoRole) => {
     const credentials = getCredentialsForRole(role);
     if (!credentials) return;
@@ -86,25 +81,8 @@ export function LoginPage() {
     setValue('password', credentials.password, { shouldValidate: true });
   };
 
-  const enterAsRole = (role: DemoRole) => {
-    const credentials = getCredentialsForRole(role);
-    if (!credentials || login.isPending || submittingRef.current) return;
-    authenticate({
-      email: credentials.email,
-      password: credentials.password,
-    });
-  };
-
-  const handleCategoryChange = (next: DemoRoleCategory) => {
-    setCategory(next);
-    const first = getRolesByCategory(next)[0];
-    if (first) {
-      setSelectedRole(first.role);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+    <div className="min-h-screen bg-[var(--color-surface)] px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-2 lg:gap-8">
         <LoginHeroPanel />
 
@@ -113,58 +91,84 @@ export function LoginPage() {
             Ingresar a Distrisoft
           </h2>
           <p className="mt-2 text-sm text-slate-600">
-            Elegí una experiencia demo, revisá el rol y entrá con acceso rápido
-            o credenciales manuales.
-          </p>
-          <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-            Los roles solo adaptan esta experiencia demo. La autorización
-            definitiva será aplicada por Distrisoft API.
+            Elegí cómo querés recorrer la demo: como administrador de la
+            distribuidora o como comercio cliente.
           </p>
 
-          <div className="mt-5 space-y-4">
-            <DemoExperienceTabs
-              activeCategory={category}
-              onChange={handleCategoryChange}
-            />
+          <div
+            className="mt-6 grid gap-4"
+            role="listbox"
+            aria-label="Perfiles demo"
+          >
+            {LOGIN_PROFILE_CARDS.map((profile) => {
+              const selected = profile.role === selectedRole;
+              return (
+                <article
+                  key={profile.role}
+                  role="option"
+                  aria-selected={selected}
+                  className={[
+                    'rounded-xl border p-4 transition',
+                    selected
+                      ? 'border-teal-700 bg-teal-50/60 ring-2 ring-teal-700/20'
+                      : 'border-slate-200 bg-white hover:border-teal-600/40',
+                  ].join(' ')}
+                >
+                  <button
+                    type="button"
+                    className="w-full text-left"
+                    onClick={() => {
+                      setSelectedRole(profile.role);
+                      fillCredentials(profile.role);
+                    }}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wide text-teal-800">
+                      {profile.subtitle}
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold text-slate-900">
+                      {profile.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {profile.description}
+                    </p>
+                    <ul className="mt-3 flex flex-wrap gap-2">
+                      {profile.highlights.map((item) => (
+                        <li
+                          key={item}
+                          className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700"
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={login.isPending}
+                    onClick={() => enterAsRole(profile.role)}
+                    className="mt-4 min-h-11 w-full rounded-lg bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                  >
+                    {login.isPending && selectedRole === profile.role
+                      ? 'Ingresando…'
+                      : profile.cta}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
 
-            <div
-              role="tabpanel"
-              id={`experience-panel-${category}`}
-              aria-labelledby={`experience-tab-${category}`}
-              className="grid gap-3"
+          <div className="mt-6 border-t border-slate-200 pt-4">
+            <button
+              type="button"
+              className="text-sm font-medium text-teal-800 underline"
+              onClick={() => setShowManual((value) => !value)}
+              aria-expanded={showManual}
             >
-              {rolesInCategory.map((presentation) => (
-                <DemoRoleCard
-                  key={presentation.role}
-                  presentation={presentation}
-                  selected={presentation.role === selectedRole}
-                  onSelect={() => setSelectedRole(presentation.role)}
-                />
-              ))}
-            </div>
-
-            <DemoRoleDetails presentation={selectedPresentation} />
-
-            <DemoQuickAccess
-              selectedLabel={selectedPresentation.label}
-              isPending={login.isPending}
-              onEnterSelected={() => enterAsRole(selectedRole)}
-              onExploreAdmin={() => {
-                setCategory('DISTRIBUTOR');
-                setSelectedRole('DISTRIBUTOR_ADMIN');
-                enterAsRole('DISTRIBUTOR_ADMIN');
-              }}
-              onShopAsCommerce={() => {
-                setCategory('COMMERCE');
-                setSelectedRole('COMMERCE_OWNER');
-                enterAsRole('COMMERCE_OWNER');
-              }}
-            />
-
-            <div className="border-t border-slate-200 pt-4">
-              <h3 className="text-sm font-semibold text-slate-800">
-                Acceso manual
-              </h3>
+              {showManual
+                ? 'Ocultar acceso manual'
+                : 'Usar correo y contraseña'}
+            </button>
+            {showManual ? (
               <div className="mt-3">
                 <LoginForm
                   register={register}
@@ -177,9 +181,9 @@ export function LoginPage() {
                       authenticate(values);
                     })();
                   }}
-                />{' '}
+                />
               </div>
-            </div>
+            ) : null}
           </div>
         </section>
       </div>

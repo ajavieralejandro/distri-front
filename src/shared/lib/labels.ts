@@ -1,6 +1,7 @@
-import { ORDER_STATUS_LABELS } from '@/features/orders/lib/order-status';
 import type {
   AccountMovementType,
+  CommerceType,
+  CommerceZone,
   DeliveryResult,
   DemoInvoiceStatus,
   DemoRole,
@@ -9,6 +10,7 @@ import type {
   PaymentStatus,
   PickItemStatus,
 } from '@/shared/types/demo';
+import { ORDER_STATUS_LABELS } from '@/features/orders/lib/order-status';
 
 export const orderStatusLabels: Record<OrderStatus, string> =
   ORDER_STATUS_LABELS;
@@ -21,14 +23,28 @@ export const paymentMethodLabels: Record<PaymentMethod, string> = {
 };
 
 export const roleLabels: Record<DemoRole, string> = {
-  DISTRIBUTOR_ADMIN: 'Administrador distribuidor',
+  DISTRIBUTOR_ADMIN: 'Administrador',
   SALES: 'Ventas',
   WAREHOUSE_PICKER: 'Preparador de depósito',
   CASHIER: 'Caja',
   DRIVER: 'Repartidor',
-  COMMERCE_OWNER: 'Dueño de comercio',
+  COMMERCE_OWNER: 'Comercio',
   COMMERCE_BUYER: 'Compras de comercio',
   COMMERCE_CASHIER: 'Cajero de comercio',
+};
+
+export const commerceTypeLabels: Record<CommerceType, string> = {
+  ALMACEN: 'Almacén',
+  KIOSCO: 'Kiosco',
+  AUTOSERVICIO: 'Autoservicio',
+  MAYORISTA: 'Mayorista',
+};
+
+export const commerceZoneLabels: Record<CommerceZone, string> = {
+  CENTRO: 'Zona centro',
+  NORTE: 'Zona norte',
+  SUR: 'Zona sur',
+  OESTE: 'Zona oeste',
 };
 
 export const pickStatusLabels: Record<PickItemStatus, string> = {

@@ -1,0 +1,6 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#eff6ff"/>
+  <rect x="265" y="120" width="110" height="230" rx="16" fill="#60a5fa"/>
+  <rect x="280" y="145" width="80" height="70" rx="8" fill="#bfdbfe"/>
+  <text x="320" y="440" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="26" fill="#0f172a" font-weight="600">Detergente</text>
+</svg>

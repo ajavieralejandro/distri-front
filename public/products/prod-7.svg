@@ -1,0 +1,6 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#ecfdf5"/>
+  <rect x="270" y="100" width="100" height="260" rx="18" fill="#34d399"/>
+  <rect x="285" y="120" width="70" height="90" rx="8" fill="#a7f3d0"/>
+  <text x="320" y="440" text-anchor="middle" font-family="Segoe UI, sans-serif" font-size="28" fill="#0f172a" font-weight="600">Aceite</text>
+</svg>

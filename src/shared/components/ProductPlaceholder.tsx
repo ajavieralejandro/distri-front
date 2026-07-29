@@ -1,4 +1,12 @@
-export function ProductPlaceholder({ name }: { name: string }) {
+type ProductPlaceholderProps = {
+  name: string;
+  className?: string;
+};
+
+export function ProductPlaceholder({
+  name,
+  className = 'h-24 w-full',
+}: ProductPlaceholderProps) {
   const initials = name
     .split(/\s+/)
     .slice(0, 2)
@@ -8,7 +16,7 @@ export function ProductPlaceholder({ name }: { name: string }) {
   return (
     <div
       aria-label={`Imagen de ${name}`}
-      className="flex h-24 w-full items-center justify-center rounded-lg bg-gradient-to-br from-teal-100 to-slate-200 text-2xl font-bold text-teal-800"
+      className={`flex items-center justify-center rounded-lg bg-gradient-to-br from-teal-100 to-slate-200 text-2xl font-bold text-teal-800 ${className}`}
     >
       {initials}
     </div>
