@@ -44,7 +44,7 @@ describe('hash router compatibility', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: /resumen/i }),
+      await screen.findByRole('heading', { name: /panel general/i }),
     ).toBeInTheDocument();
   });
 

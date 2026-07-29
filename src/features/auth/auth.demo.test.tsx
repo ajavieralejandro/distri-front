@@ -12,7 +12,7 @@ describe('demo login', () => {
     renderWithProviders(<LoginPage />, { route: '/login' });
 
     await user.click(
-      screen.getByRole('button', { name: 'Entrar como Administrador' }),
+      screen.getByRole('button', { name: 'Entrar como administrador' }),
     );
 
     await waitFor(() =>
@@ -21,15 +21,13 @@ describe('demo login', () => {
     expect(window.sessionStorage.getItem(DEMO_SESSION_KEY)).not.toBeNull();
   });
 
-  it('logs in the commerce owner through fill + submit', async () => {
+  it('logs in the commerce owner through profile card', async () => {
     const user = userEvent.setup();
     renderWithProviders(<LoginPage />, { route: '/login' });
 
-    await user.click(screen.getByRole('tab', { name: 'Comercio' }));
     await user.click(
-      screen.getByRole('button', { name: 'Completar credenciales del rol' }),
+      screen.getByRole('button', { name: 'Entrar como comercio' }),
     );
-    await user.click(screen.getByRole('button', { name: 'Ingresar' }));
 
     await waitFor(() => expect(readDemoSession()?.role).toBe('COMMERCE_OWNER'));
   });

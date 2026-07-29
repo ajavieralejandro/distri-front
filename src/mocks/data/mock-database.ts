@@ -2,7 +2,7 @@ import type { DemoDatabase } from '@/shared/types/demo';
 
 import { createInitialDatabase } from './fixtures';
 
-export const STORAGE_KEY = 'distrisoft-demo-db-v2';
+export const STORAGE_KEY = 'distrisoft-demo-db-v3';
 
 let database: DemoDatabase | undefined;
 
@@ -36,7 +36,7 @@ export function loadDatabase(): DemoDatabase {
         parsed !== null &&
         typeof parsed === 'object' &&
         'version' in parsed &&
-        parsed.version === 2
+        parsed.version === 3
       ) {
         database = parsed as DemoDatabase;
         return database;

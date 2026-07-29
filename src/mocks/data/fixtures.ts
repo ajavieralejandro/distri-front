@@ -166,7 +166,89 @@ const productRows: ProductRow[] = [
     '7400.00',
     0,
   ],
+  [
+    'prod-13',
+    'BEB-004',
+    'Cerveza sin alcohol',
+    'Cerveza 0.0% 473 ml',
+    'cat-1',
+    'PACK',
+    'Pack x 24',
+    '18600.00',
+    40,
+  ],
+  [
+    'prod-14',
+    'ALM-007',
+    'Café molido',
+    'Café molido torrado 500 g',
+    'cat-2',
+    'PACK',
+    'Pack x 8',
+    '22400.00',
+    26,
+  ],
+  [
+    'prod-15',
+    'ALM-008',
+    'Galletitas dulces',
+    'Galletitas surtidas 350 g',
+    'cat-2',
+    'BOX',
+    'Caja x 12',
+    '14200.00',
+    33,
+  ],
+  [
+    'prod-16',
+    'ALM-009',
+    'Snacks salados',
+    'Papas fritas clásicas 150 g',
+    'cat-2',
+    'BOX',
+    'Caja x 20',
+    '16800.00',
+    55,
+  ],
 ];
+
+const productMeta: Record<
+  string,
+  {
+    brand: string;
+    wholesalePrice: string;
+    featured?: boolean;
+    offer?: boolean;
+    isNew?: boolean;
+  }
+> = {
+  'prod-1': { brand: 'Aquavita', wholesalePrice: '1120.00' },
+  'prod-2': {
+    brand: 'ColaSur',
+    wholesalePrice: '1650.00',
+    offer: true,
+    featured: true,
+  },
+  'prod-3': { brand: 'Citric', wholesalePrice: '3900.00', isNew: true },
+  'prod-4': { brand: 'CampoFino', wholesalePrice: '7900.00' },
+  'prod-5': { brand: 'CampoFino', wholesalePrice: '10400.00' },
+  'prod-6': { brand: 'Molino Sur', wholesalePrice: '6400.00', offer: true },
+  'prod-7': { brand: 'Girasol Plus', wholesalePrice: '20100.00', featured: true },
+  'prod-8': { brand: 'LimpiaYa', wholesalePrice: '9100.00' },
+  'prod-9': { brand: 'LimpiaYa', wholesalePrice: '7200.00' },
+  'prod-10': { brand: 'SoftCare', wholesalePrice: '3200.00', isNew: true },
+  'prod-11': { brand: 'MateReal', wholesalePrice: '14600.00', featured: true },
+  'prod-12': { brand: 'DulceCampo', wholesalePrice: '6900.00' },
+  'prod-13': {
+    brand: 'CeroBeer',
+    wholesalePrice: '17200.00',
+    isNew: true,
+    offer: true,
+  },
+  'prod-14': { brand: 'Aroma Norte', wholesalePrice: '20800.00', featured: true },
+  'prod-15': { brand: 'Horno Dulce', wholesalePrice: '13100.00', offer: true },
+  'prod-16': { brand: 'CrunchMax', wholesalePrice: '15500.00' },
+};
 
 const products: Product[] = productRows.map(
   (
@@ -182,18 +264,27 @@ const products: Product[] = productRows.map(
       availableStock,
     ],
     index,
-  ) => ({
-    id,
-    sku,
-    name,
-    description,
-    categoryId,
-    unit,
-    presentation,
-    price,
-    availableStock,
-    active: index !== 11,
-  }),
+  ) => {
+    const meta = productMeta[id]!;
+    return {
+      id,
+      sku,
+      name,
+      description,
+      categoryId,
+      brand: meta.brand,
+      unit,
+      presentation,
+      price,
+      wholesalePrice: meta.wholesalePrice,
+      availableStock,
+      imageUrl: `products/${id}.svg`,
+      active: index !== 11,
+      featured: meta.featured,
+      offer: meta.offer,
+      isNew: meta.isNew,
+    };
+  },
 );
 
 const commerces: Commerce[] = [
@@ -209,6 +300,19 @@ const commerces: Commerce[] = [
     email: 'compras@elpuente.demo',
     phone: '+54 11 4000-1001',
     address: 'Av. Rivadavia 1200, CABA',
+    city: 'CABA',
+    zone: 'CENTRO',
+    commerceType: 'ALMACEN',
+    tags: [
+      'Cliente frecuente',
+      'Pedido pendiente',
+      'Almacén',
+      'Zona centro',
+      'Visitar esta semana',
+    ],
+    latitude: -34.6158,
+    longitude: -58.4333,
+    lastOrderAt: '2026-07-20T12:00:00.000Z',
   },
   {
     id: 'com-2',
@@ -222,6 +326,19 @@ const commerces: Commerce[] = [
     email: 'pedidos@mercadonorte.demo',
     phone: '+54 11 4000-1002',
     address: 'Av. San Martín 850, CABA',
+    city: 'CABA',
+    zone: 'NORTE',
+    commerceType: 'MAYORISTA',
+    tags: [
+      'Cliente frecuente',
+      'Deuda vencida',
+      'Mayorista',
+      'Zona norte',
+      'Pedido pendiente',
+    ],
+    latitude: -34.5765,
+    longitude: -58.505,
+    lastOrderAt: '2026-07-20T12:00:00.000Z',
   },
   {
     id: 'com-3',
@@ -235,6 +352,13 @@ const commerces: Commerce[] = [
     email: 'admin@laesquina.demo',
     phone: '+54 11 4000-1003',
     address: 'Nazca 2300, CABA',
+    city: 'CABA',
+    zone: 'OESTE',
+    commerceType: 'AUTOSERVICIO',
+    tags: ['Autoservicio', 'Zona oeste', 'Deuda vencida'],
+    latitude: -34.615,
+    longitude: -58.485,
+    lastOrderAt: '2026-07-18T12:00:00.000Z',
   },
   {
     id: 'com-4',
@@ -248,6 +372,12 @@ const commerces: Commerce[] = [
     email: 'contacto@kioscocentral.demo',
     phone: '+54 11 4000-1004',
     address: 'Florida 420, CABA',
+    city: 'CABA',
+    zone: 'CENTRO',
+    commerceType: 'KIOSCO',
+    tags: ['Kiosco', 'Zona centro'],
+    latitude: -34.6039,
+    longitude: -58.3772,
   },
 ];
 
@@ -548,7 +678,7 @@ export function createInitialDatabase(): DemoDatabase {
   }));
 
   return {
-    version: 2,
+    version: 3,
     distributorId: 'dist-1',
     categories: [
       { id: 'cat-1', name: 'Bebidas' },

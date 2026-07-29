@@ -24,6 +24,34 @@ export type AdminAlert = {
   responsibleLabel?: string;
 };
 
+export type CommerceMapItem = {
+  id: string;
+  name: string;
+  businessName: string;
+  address: string;
+  city: string;
+  zone: string;
+  zoneLabel: string;
+  commerceType: string;
+  commerceTypeLabel: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  statusLabel: string;
+  phone: string;
+  tags: string[];
+  latitude: number;
+  longitude: number;
+  lastOrderAt?: string;
+  lastOrderLabel: string;
+  pendingOrders: number;
+  hasDebt: boolean;
+  hasOverdueDebt: boolean;
+  debt: string;
+  needsAttention: boolean;
+  href: string;
+  directionsUrl: string;
+};
+
+/** Legacy operational markers (warehouses/orders). Kept for compatibility. */
 export type MapLocationType =
   | 'WAREHOUSE'
   | 'DISTRIBUTOR_BRANCH'

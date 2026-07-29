@@ -13,7 +13,7 @@ describe('App', () => {
       screen.getByRole('heading', { name: 'Ingresar a Distrisoft' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('tablist', { name: 'Tipo de experiencia demo' }),
+      screen.getByRole('listbox', { name: 'Perfiles demo' }),
     ).toBeInTheDocument();
   });
 
@@ -50,7 +50,7 @@ describe('App', () => {
       }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: /resumen/i }),
+      await screen.findByRole('heading', { name: /panel general/i }),
     ).toBeInTheDocument();
   });
 

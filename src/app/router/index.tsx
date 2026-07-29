@@ -12,12 +12,13 @@ import { OrderDetailPage } from '@/pages/admin/OrderDetailPage';
 import { OrdersPage } from '@/pages/admin/OrdersPage';
 import { PaymentsPage } from '@/pages/admin/PaymentsPage';
 import { ProductsPage } from '@/pages/admin/ProductsPage';
-import { AccountPage } from '@/pages/commerce/AccountPage';
-import { CartPage } from '@/pages/commerce/CartPage';
-import { CatalogPage } from '@/pages/commerce/CatalogPage';
 import { CommerceBillingPage } from '@/pages/commerce/CommerceBillingPage';
 import { CommerceDashboardPage } from '@/pages/commerce/CommerceDashboardPage';
 import { CommerceOrdersPage } from '@/pages/commerce/OrdersPage';
+import { CommerceProfilePage } from '@/pages/commerce/CommerceProfilePage';
+import { CartPage } from '@/pages/commerce/CartPage';
+import { CatalogPage } from '@/pages/commerce/CatalogPage';
+import { AccountPage } from '@/pages/commerce/AccountPage';
 import { CashierCustomerPage } from '@/pages/operations/CashierCustomerPage';
 import { CashierHomePage } from '@/pages/operations/CashierHomePage';
 import { CashierPaymentsPage } from '@/pages/operations/CashierPaymentsPage';
@@ -130,13 +131,14 @@ export function AppRouter() {
         }
       >
         <Route path="/commerce" element={<CommerceLayout />}>
-          <Route index element={<Navigate to="catalog" replace />} />
+          <Route index element={<Navigate to="dashboard" replace />} />
           <Route element={<RequireDemoAuth roles={['COMMERCE_OWNER']} />}>
             <Route path="dashboard" element={<CommerceDashboardPage />} />
           </Route>
           <Route path="catalog" element={<CatalogPage />} />
           <Route path="cart" element={<CartPage />} />
           <Route path="orders" element={<CommerceOrdersPage />} />
+          <Route path="profile" element={<CommerceProfilePage />} />
           <Route element={<RequireDemoAuth roles={['COMMERCE_OWNER']} />}>
             <Route path="account" element={<AccountPage />} />
             <Route path="payments" element={<AccountPage />} />
