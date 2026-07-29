@@ -53,9 +53,7 @@ export function AdminMapPage() {
   }, [query.data, search, type, zone, tag, quick]);
 
   const selected =
-    filtered.find((item) => item.id === selectedId) ??
-    filtered[0] ??
-    null;
+    filtered.find((item) => item.id === selectedId) ?? filtered[0] ?? null;
 
   const summary = useMemo(() => {
     const source = query.data ?? [];
@@ -81,7 +79,10 @@ export function AdminMapPage() {
           ['Con pedido pendiente', summary.pending],
           ['Requieren seguimiento', summary.attention],
         ].map(([label, value]) => (
-          <div key={String(label)} className="rounded-xl bg-white p-3 shadow-sm">
+          <div
+            key={String(label)}
+            className="rounded-xl bg-white p-3 shadow-sm"
+          >
             <p className="text-xs text-slate-500">{label}</p>
             <p className="text-xl font-semibold">{value}</p>
           </div>

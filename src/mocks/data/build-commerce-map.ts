@@ -1,8 +1,5 @@
 import { compareMoney } from '@/shared/lib/decimal';
-import {
-  commerceTypeLabels,
-  commerceZoneLabels,
-} from '@/shared/lib/labels';
+import { commerceTypeLabels, commerceZoneLabels } from '@/shared/lib/labels';
 import type { CommerceMapItem } from '@/shared/types/admin-ops';
 import type { Commerce, Order } from '@/shared/types/demo';
 

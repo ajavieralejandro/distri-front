@@ -233,7 +233,11 @@ const productMeta: Record<
   'prod-4': { brand: 'CampoFino', wholesalePrice: '7900.00' },
   'prod-5': { brand: 'CampoFino', wholesalePrice: '10400.00' },
   'prod-6': { brand: 'Molino Sur', wholesalePrice: '6400.00', offer: true },
-  'prod-7': { brand: 'Girasol Plus', wholesalePrice: '20100.00', featured: true },
+  'prod-7': {
+    brand: 'Girasol Plus',
+    wholesalePrice: '20100.00',
+    featured: true,
+  },
   'prod-8': { brand: 'LimpiaYa', wholesalePrice: '9100.00' },
   'prod-9': { brand: 'LimpiaYa', wholesalePrice: '7200.00' },
   'prod-10': { brand: 'SoftCare', wholesalePrice: '3200.00', isNew: true },
@@ -245,7 +249,11 @@ const productMeta: Record<
     isNew: true,
     offer: true,
   },
-  'prod-14': { brand: 'Aroma Norte', wholesalePrice: '20800.00', featured: true },
+  'prod-14': {
+    brand: 'Aroma Norte',
+    wholesalePrice: '20800.00',
+    featured: true,
+  },
   'prod-15': { brand: 'Horno Dulce', wholesalePrice: '13100.00', offer: true },
   'prod-16': { brand: 'CrunchMax', wholesalePrice: '15500.00' },
 };
