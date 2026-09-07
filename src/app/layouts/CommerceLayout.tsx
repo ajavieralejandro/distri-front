@@ -1,13 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { env } from '@/app/config/env';
+import { getAppProfileLabel } from '@/features/auth/app-profile';
 import { useDemoSession, useLogoutMutation } from '@/features/auth/hooks';
 import { hasPermission } from '@/features/auth/permissions';
 import { useCartStore } from '@/features/orders/cart-store';
 import { ResetDemoButton } from '@/features/demo/ResetDemoButton';
 import { ApiStatus } from '@/shared/components/ApiStatus';
 import { DemoBanner } from '@/shared/components/DemoBanner';
-import { roleLabels } from '@/shared/lib/labels';
 import type { Permission } from '@/shared/types/demo';
 
 const commerceNavItems: Array<{
@@ -60,7 +60,7 @@ export function CommerceLayout() {
               <div className="flex flex-wrap items-center gap-3 text-sm">
                 <span>
                   {session?.displayName} ·{' '}
-                  {session ? roleLabels[session.role] : ''}
+                  {session ? getAppProfileLabel(session.role) : ''}
                 </span>
                 <ResetDemoButton />
                 {env.isDevelopment && !env.isMockDataSource && <ApiStatus />}

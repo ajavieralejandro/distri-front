@@ -2,12 +2,12 @@ import { useId, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { env } from '@/app/config/env';
+import { getAppProfileLabel } from '@/features/auth/app-profile';
 import { useDemoSession, useLogoutMutation } from '@/features/auth/hooks';
 import { hasPermission } from '@/features/auth/permissions';
 import { ResetDemoButton } from '@/features/demo/ResetDemoButton';
 import { ApiStatus } from '@/shared/components/ApiStatus';
 import { DemoBanner } from '@/shared/components/DemoBanner';
-import { roleLabels } from '@/shared/lib/labels';
 import type { Permission } from '@/shared/types/demo';
 
 type AdminNavItem = {
@@ -121,7 +121,7 @@ export function AdminLayout() {
             <div className="flex items-center gap-3">
               <span className="hidden text-sm sm:inline">
                 {session?.displayName} ·{' '}
-                {session ? roleLabels[session.role] : ''}
+                {session ? getAppProfileLabel(session.role) : ''}
               </span>
               <ResetDemoButton />
               {env.isDevelopment && !env.isMockDataSource && <ApiStatus />}

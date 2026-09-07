@@ -143,7 +143,6 @@ export function AppRouter() {
             <Route path="account" element={<AccountPage />} />
             <Route path="payments" element={<AccountPage />} />
             <Route path="billing" element={<CommerceBillingPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
           </Route>
         </Route>
       </Route>
