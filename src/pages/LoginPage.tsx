@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { env } from '@/app/config/env';
 import { LoginForm } from '@/features/auth/components/LoginForm';
@@ -48,6 +48,12 @@ export function LoginPage() {
             La autenticación demo está deshabilitada y la autenticación por API
             todavía no está lista.
           </p>
+          <Link
+            to="/conexion"
+            className="mt-4 inline-block text-sm font-semibold text-teal-800"
+          >
+            Conexión con el servidor
+          </Link>
         </section>
       </div>
     );
@@ -185,6 +191,12 @@ export function LoginPage() {
               </div>
             ) : null}
           </div>
+          <Link
+            to="/conexion"
+            className="mt-4 inline-block text-sm font-semibold text-teal-800"
+          >
+            Conexión con el servidor
+          </Link>
         </section>
       </div>
     </div>

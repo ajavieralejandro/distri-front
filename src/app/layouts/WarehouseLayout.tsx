@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { DemoBanner } from '@/shared/components/DemoBanner';
+import { ConnectionNavLink } from '@/features/connection/ConnectionNavLink';
 import { ResetDemoButton } from '@/features/demo/ResetDemoButton';
 import { useDemoSession, useLogoutMutation } from '@/features/auth/hooks';
 import { roleLabels } from '@/shared/lib/labels';
@@ -19,6 +20,7 @@ export function WarehouseLayout() {
             </p>
           </div>
           <div className="flex gap-2">
+            <ConnectionNavLink />
             <ResetDemoButton />
             <button
               disabled={logout.isPending}

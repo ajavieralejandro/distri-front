@@ -30,6 +30,7 @@ import { WarehouseHomePage } from '@/pages/operations/WarehouseHomePage';
 import { WarehouseOrderDetailPage } from '@/pages/operations/WarehouseOrderDetailPage';
 import { WarehouseOrdersPage } from '@/pages/operations/WarehouseOrdersPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
+import { ConnectionPage } from '@/features/connection/ConnectionPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RequireDemoAuth } from '@/app/router/RequireDemoAuth';
@@ -45,6 +46,7 @@ export function AppRouter() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/conexion" element={<ConnectionPage />} />
 
       <Route path="/forbidden" element={<ForbiddenPage />} />
       <Route

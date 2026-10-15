@@ -5,6 +5,7 @@ import { env } from '@/app/config/env';
 import { getAppProfileLabel } from '@/features/auth/app-profile';
 import { useDemoSession, useLogoutMutation } from '@/features/auth/hooks';
 import { hasPermission } from '@/features/auth/permissions';
+import { ConnectionNavLink } from '@/features/connection/ConnectionNavLink';
 import { ResetDemoButton } from '@/features/demo/ResetDemoButton';
 import { ApiStatus } from '@/shared/components/ApiStatus';
 import { DemoBanner } from '@/shared/components/DemoBanner';
@@ -123,6 +124,7 @@ export function AdminLayout() {
                 {session?.displayName} ·{' '}
                 {session ? getAppProfileLabel(session.role) : ''}
               </span>
+              <ConnectionNavLink />
               <ResetDemoButton />
               {env.isDevelopment && !env.isMockDataSource && <ApiStatus />}
               <button

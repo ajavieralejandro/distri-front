@@ -1,5 +1,15 @@
 import { env } from '@/app/config/env';
 import { HttpError } from '@/shared/api/http-error';
+import {
+  getActiveApiBaseUrl,
+  resolveHttpBaseUrl,
+} from '@/shared/connection/connection-store';
+import {
+  CancelledRequestError,
+  requestGeneration,
+  requestSignal,
+  throwIfStale,
+} from '@/shared/connection/request-scope';
 
 export type HttpRequestOptions = {
   signal?: AbortSignal;
@@ -102,13 +112,33 @@ async function request<TResponse>(
     headers.set('Accept', 'application/json');
   }
 
-  const response = await fetch(joinUrl(env.apiUrl, path), {
-    method,
-    credentials: 'include',
-    signal: options.signal,
-    headers,
-    body: hasBody ? JSON.stringify(body) : undefined,
+  const started = requestGeneration();
+  const baseUrl = resolveHttpBaseUrl({
+    mockDataSource: env.isMockDataSource,
+    activeBaseUrl: getActiveApiBaseUrl(),
+    envBaseUrl: env.apiUrl,
   });
+  let response: Response;
+  try {
+    response = await fetch(joinUrl(baseUrl, path), {
+      method,
+      credentials: 'include',
+      signal: options.signal ?? requestSignal(),
+      headers,
+      body: hasBody ? JSON.stringify(body) : undefined,
+    });
+  } catch (error) {
+    if (
+      error instanceof CancelledRequestError ||
+      started !== requestGeneration() ||
+      (error instanceof Error && error.name === 'AbortError')
+    ) {
+      throw new CancelledRequestError();
+    }
+    throw error;
+  }
+
+  throwIfStale(started);
 
   handleAuthStatus(response.status);
 
@@ -125,6 +155,7 @@ async function request<TResponse>(
   }
 
   if (response.status === 204) {
+    throwIfStale(started);
     return undefined as TResponse;
   }
 
@@ -142,7 +173,9 @@ async function request<TResponse>(
     );
   }
 
-  return (await response.json()) as TResponse;
+  const payload = (await response.json()) as TResponse;
+  throwIfStale(started);
+  return payload;
 }
 
 export const httpClient: HttpClient = {

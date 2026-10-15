@@ -14,6 +14,7 @@ const envSchema = z.object({
   VITE_APP_ENV: appEnvSchema,
   VITE_DATA_SOURCE: dataSourceSchema,
   VITE_DEMO_MODE: booleanStringSchema,
+  VITE_ALLOW_CLEARTEXT: z.enum(['true', 'false']).optional(),
 });
 
 export type AppEnv = z.infer<typeof appEnvSchema>;
@@ -26,6 +27,8 @@ export type AppConfig = {
   dataSource: DataSource;
   isMockDataSource: boolean;
   demoMode: boolean;
+  allowCleartext: boolean;
+  allowCleartextHttp: boolean;
 };
 
 type EnvSource = {
@@ -33,6 +36,7 @@ type EnvSource = {
   VITE_APP_ENV?: string;
   VITE_DATA_SOURCE?: string;
   VITE_DEMO_MODE?: string;
+  VITE_ALLOW_CLEARTEXT?: string;
 };
 
 function formatEnvErrors(error: z.ZodError): string {
@@ -54,6 +58,7 @@ export function loadEnv(source: EnvSource): AppConfig {
     VITE_APP_ENV: source.VITE_APP_ENV,
     VITE_DATA_SOURCE: source.VITE_DATA_SOURCE,
     VITE_DEMO_MODE: source.VITE_DEMO_MODE,
+    VITE_ALLOW_CLEARTEXT: source.VITE_ALLOW_CLEARTEXT,
   });
 
   if (!result.success) {
@@ -66,8 +71,14 @@ export function loadEnv(source: EnvSource): AppConfig {
     );
   }
 
-  const { VITE_API_URL, VITE_APP_ENV, VITE_DATA_SOURCE, VITE_DEMO_MODE } =
-    result.data;
+  const {
+    VITE_API_URL,
+    VITE_APP_ENV,
+    VITE_DATA_SOURCE,
+    VITE_DEMO_MODE,
+    VITE_ALLOW_CLEARTEXT,
+  } = result.data;
+  const allowCleartext = VITE_ALLOW_CLEARTEXT === 'true';
 
   return {
     apiUrl: VITE_API_URL.replace(/\/$/, ''),
@@ -76,7 +87,19 @@ export function loadEnv(source: EnvSource): AppConfig {
     dataSource: VITE_DATA_SOURCE,
     isMockDataSource: VITE_DATA_SOURCE === 'mock',
     demoMode: VITE_DEMO_MODE,
+    allowCleartext,
+    allowCleartextHttp: cleartextAllowed(VITE_APP_ENV, allowCleartext),
   };
+}
+
+export function cleartextAllowed(appEnv: AppEnv, flag: boolean): boolean {
+  if (appEnv === 'production') {
+    return false;
+  }
+  if (flag) {
+    return true;
+  }
+  return appEnv === 'development' || appEnv === 'test';
 }
 
 export const env = loadEnv({
@@ -84,4 +107,5 @@ export const env = loadEnv({
   VITE_APP_ENV: import.meta.env.VITE_APP_ENV,
   VITE_DATA_SOURCE: import.meta.env.VITE_DATA_SOURCE,
   VITE_DEMO_MODE: import.meta.env.VITE_DEMO_MODE,
+  VITE_ALLOW_CLEARTEXT: import.meta.env.VITE_ALLOW_CLEARTEXT,
 });

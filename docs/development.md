@@ -28,6 +28,8 @@ VITE_DEMO_MODE=true
 - `VITE_ROUTER_MODE=browser|hash` (opcional; se infiere desde Vite `base`)
 - Sin secretos en `VITE_*`
 - API productiva: `api` + `DEMO_MODE=false` (MSW no arranca)
+- `VITE_ALLOW_CLEARTEXT=true` solo en la variante interna (`npm run dev:internal`). Producción rechaza HTTP aunque el flag esté presente. La pantalla Conexión avisa cuando la dirección es HTTP.
+- Una página servida por HTTPS no puede llamar a una API HTTP. El mensaje de contenido mixto no se presenta como fallo de login.
 
 Ver [modo demo](demo-mode.md) y [GitHub Pages](deployment-github-pages.md).
 

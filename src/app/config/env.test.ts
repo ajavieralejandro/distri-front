@@ -18,6 +18,8 @@ describe('loadEnv', () => {
       dataSource: 'mock',
       isMockDataSource: true,
       demoMode: true,
+      allowCleartext: false,
+      allowCleartextHttp: true,
     });
   });
 
@@ -52,5 +54,19 @@ describe('loadEnv', () => {
 
     expect(config.isMockDataSource).toBe(false);
     expect(config.demoMode).toBe(false);
+    expect(config.allowCleartextHttp).toBe(false);
+  });
+
+  it('rejects cleartext in production even when the internal flag is set', () => {
+    const config = loadEnv({
+      VITE_API_URL: 'https://api.ejemplo/api',
+      VITE_APP_ENV: 'production',
+      VITE_DATA_SOURCE: 'api',
+      VITE_DEMO_MODE: 'false',
+      VITE_ALLOW_CLEARTEXT: 'true',
+    });
+
+    expect(config.allowCleartext).toBe(true);
+    expect(config.allowCleartextHttp).toBe(false);
   });
 });

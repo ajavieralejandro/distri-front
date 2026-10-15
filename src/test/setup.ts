@@ -3,6 +3,9 @@ import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 
 import { clearDemoSession } from '@/features/auth/session';
+import { resetConnectionState } from '@/shared/connection/connection-store';
+import { resetUncertainSubmissions } from '@/shared/connection/pending-submission';
+import { resetRequestScope } from '@/shared/connection/request-scope';
 import { useCartStore } from '@/features/orders/cart-store';
 import { resetDatabase } from '@/mocks/data/mock-database';
 import { server } from '@/mocks/server';
@@ -22,6 +25,9 @@ beforeEach(() => {
   }
   clearDemoSession();
   useCartStore.getState().clear();
+  resetConnectionState();
+  resetUncertainSubmissions();
+  resetRequestScope();
 });
 
 afterEach(() => {
@@ -29,6 +35,9 @@ afterEach(() => {
   clearDemoSession();
   resetDatabase();
   useCartStore.getState().clear();
+  resetConnectionState();
+  resetUncertainSubmissions();
+  resetRequestScope();
 
   if (usesMockData) {
     server.resetHandlers();
