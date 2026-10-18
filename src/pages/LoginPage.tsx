@@ -1,12 +1,18 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 
 import { env } from '@/app/config/env';
+import { apiHomePath } from '@/features/auth/api-access';
+import { consumeAuthNotice, peekAuthNotice } from '@/features/auth/api-session';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { LoginHeroPanel } from '@/features/auth/components/LoginHeroPanel';
-import { useDemoSession, useLoginMutation } from '@/features/auth/hooks';
+import {
+  useApiSession,
+  useDemoSession,
+  useLoginMutation,
+} from '@/features/auth/hooks';
 import { LOGIN_PROFILE_CARDS } from '@/features/auth/login-profiles';
 import { getHomePath } from '@/features/auth/permissions';
 import { getCredentialsForRole } from '@/features/auth/role-presentation';
@@ -40,30 +46,18 @@ export function LoginPage() {
   }
 
   if (!env.isMockDataSource) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-        <section className="max-w-lg rounded-xl bg-white p-8 shadow">
-          <h1 className="text-xl font-semibold">Autenticación no disponible</h1>
-          <p className="mt-3 text-slate-600">
-            La autenticación demo está deshabilitada y la autenticación por API
-            todavía no está lista.
-          </p>
-          <Link
-            to="/conexion"
-            className="mt-4 inline-block text-sm font-semibold text-teal-800"
-          >
-            Conexión con el servidor
-          </Link>
-        </section>
-      </div>
-    );
+    return <ApiLoginPage />;
   }
 
   const authenticate = (values: LoginFormValues) => {
     if (login.isPending || submittingRef.current) return;
     submittingRef.current = true;
     login.mutate(values, {
-      onSuccess: (result) => navigate(getHomePath(result.role)),
+      onSuccess: (result) => {
+        if (result.source === 'demo') {
+          navigate(getHomePath(result.role));
+        }
+      },
       onSettled: () => {
         submittingRef.current = false;
       },
@@ -199,6 +193,90 @@ export function LoginPage() {
           </Link>
         </section>
       </div>
+    </div>
+  );
+}
+
+function ApiLoginPage() {
+  const session = useApiSession();
+  const navigate = useNavigate();
+  const login = useLoginMutation();
+  const submittingRef = useRef(false);
+  const [sessionExpired] = useState(() => peekAuthNotice() === 'expired');
+
+  useEffect(() => {
+    if (sessionExpired) {
+      consumeAuthNotice();
+    }
+  }, [sessionExpired]);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  if (session) {
+    return <Navigate to={apiHomePath(session.role)} replace />;
+  }
+
+  const authenticate = (values: LoginFormValues) => {
+    if (login.isPending || submittingRef.current) return;
+    submittingRef.current = true;
+    login.mutate(values, {
+      onSuccess: (result) => {
+        if (result.source === 'api') {
+          navigate(apiHomePath(result.role));
+        }
+      },
+      onSettled: () => {
+        submittingRef.current = false;
+      },
+    });
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
+      <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h1 className="text-2xl font-semibold text-slate-900">
+          Ingresar a Distrisoft
+        </h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Ingresá con la cuenta de administrador del servidor. El panel usa los
+          pedidos reales y no completa datos de demostración.
+        </p>
+        {sessionExpired ? (
+          <p role="alert" className="mt-4 text-sm text-red-700">
+            La sesión venció. Volvé a ingresar.
+          </p>
+        ) : null}
+        <div className="mt-6">
+          <LoginForm
+            variant="api"
+            register={register}
+            errors={errors}
+            isPending={login.isPending}
+            serverError={login.error?.message}
+            onSubmit={() => {
+              void handleSubmit((values) => {
+                authenticate(values);
+              })();
+            }}
+          />
+        </div>
+        <Link
+          to="/conexion"
+          className="mt-4 inline-block text-sm font-semibold text-teal-800"
+        >
+          Conexión con el servidor
+        </Link>
+      </section>
     </div>
   );
 }

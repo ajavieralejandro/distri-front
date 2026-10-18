@@ -8,9 +8,10 @@ type LoginFormProps = {
   register: UseFormRegister<LoginFormValues>;
   errors: FieldErrors<LoginFormValues>;
   onSubmit: () => void;
-  onFillCredentials: () => void;
+  onFillCredentials?: () => void;
   isPending: boolean;
   serverError?: string;
+  variant?: 'demo' | 'api';
 };
 
 export function LoginForm({
@@ -20,6 +21,7 @@ export function LoginForm({
   onFillCredentials,
   isPending,
   serverError,
+  variant = 'demo',
 }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const emailId = useId();
@@ -36,10 +38,12 @@ export function LoginForm({
       }}
       noValidate
     >
-      <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-        Todas las cuentas de demostración usan la contraseña:{' '}
-        <strong>{DEMO_SHARED_PASSWORD}</strong>
-      </p>
+      {variant === 'demo' ? (
+        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          Todas las cuentas de demostración usan la contraseña:{' '}
+          <strong>{DEMO_SHARED_PASSWORD}</strong>
+        </p>
+      ) : null}
       <div>
         <label htmlFor={emailId} className="block text-sm font-medium">
           Correo
@@ -102,14 +106,16 @@ export function LoginForm({
         </p>
       )}
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={onFillCredentials}
-          className="min-h-11 flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-        >
-          Completar credenciales del rol
-        </button>
+        {variant === 'demo' && onFillCredentials ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={onFillCredentials}
+            className="min-h-11 flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-800 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+          >
+            Completar credenciales del rol
+          </button>
+        ) : null}
         <button
           type="submit"
           disabled={isPending}

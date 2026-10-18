@@ -5,16 +5,23 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   busy = false,
+  error,
 }: {
   title: string;
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
   busy?: boolean;
+  error?: string;
 }) {
   return (
-    <Modal title={title} onClose={onCancel}>
+    <Modal title={title} onClose={busy ? () => undefined : onCancel}>
       <p className="text-slate-600">{message}</p>
+      {error ? (
+        <p role="alert" className="mt-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
       <div className="mt-6 flex justify-end gap-3">
         <button
           type="button"

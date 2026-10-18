@@ -1,3 +1,7 @@
+import {
+  clearApiSession,
+  hasApiCredentials,
+} from '@/features/auth/api-session';
 import { clearDemoSession, readDemoSession } from '@/features/auth/session';
 import { useCartStore } from '@/features/orders/cart-store';
 import {
@@ -22,7 +26,7 @@ export type ServerSwitchImpact = {
 export function serverSwitchImpact(): ServerSwitchImpact {
   const current = readActiveBaseUrl();
   return {
-    session: readDemoSession() !== null,
+    session: readDemoSession() !== null || hasApiCredentials(),
     cart: useCartStore.getState().items.length > 0,
     uncertain: current ? readUncertainSubmission(current) : null,
   };
@@ -64,6 +68,7 @@ export function commitApiBaseUrl(next: string | null): void {
     void client?.cancelQueries();
     client?.clear();
     clearDemoSession();
+    clearApiSession();
     useCartStore.getState().clear();
   }
 

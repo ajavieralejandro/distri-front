@@ -2,6 +2,7 @@ import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
 
+import { clearApiSession } from '@/features/auth/api-session';
 import { clearDemoSession } from '@/features/auth/session';
 import { resetConnectionState } from '@/shared/connection/connection-store';
 import { resetUncertainSubmissions } from '@/shared/connection/pending-submission';
@@ -24,6 +25,7 @@ beforeEach(() => {
     resetDatabase();
   }
   clearDemoSession();
+  clearApiSession();
   useCartStore.getState().clear();
   resetConnectionState();
   resetUncertainSubmissions();
@@ -33,6 +35,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   clearDemoSession();
+  clearApiSession();
   resetDatabase();
   useCartStore.getState().clear();
   resetConnectionState();

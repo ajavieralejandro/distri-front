@@ -2,6 +2,11 @@ import { QueryClient } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { env } from '@/app/config/env';
+import {
+  API_TOKEN_STORAGE_KEY,
+  writeApiTokens,
+  writeApiUser,
+} from '@/features/auth/api-session';
 import { writeDemoSession } from '@/features/auth/session';
 import { useCartStore } from '@/features/orders/cart-store';
 import { shouldStartMockWorker } from '@/mocks/should-start-worker';
@@ -66,6 +71,17 @@ describe('frontend connection store', () => {
       displayName: 'Norte',
       email: 'norte@pruebas.distrisoft.local',
     });
+    writeApiUser({
+      userId: 'usr-admin',
+      role: 'ADMIN',
+      displayName: 'Administrador',
+      email: 'admin@pruebas.distrisoft.local',
+      commerceId: null,
+    });
+    writeApiTokens('http://localhost:3000/api', {
+      accessToken: 'access-secret',
+      refreshToken: 'refresh-secret',
+    });
     useCartStore.getState().addItem(
       {
         productId: 'prod-agua',
@@ -90,6 +106,8 @@ describe('frontend connection store', () => {
     expect(
       window.sessionStorage.getItem('distrisoft-demo-session-v2'),
     ).toBeNull();
+    expect(window.sessionStorage.getItem(API_TOKEN_STORAGE_KEY)).toBeNull();
+    expect(window.sessionStorage.getItem('distrisoft-api-session')).toBeNull();
     expect(useCartStore.getState().items).toEqual([]);
     expect(cancel).toHaveBeenCalled();
     expect(clear).toHaveBeenCalled();

@@ -39,6 +39,7 @@ import { CashierLayout } from '@/app/layouts/CashierLayout';
 import { CommerceLayout } from '@/app/layouts/CommerceLayout';
 import { DeliveryLayout } from '@/app/layouts/DeliveryLayout';
 import { WarehouseLayout } from '@/app/layouts/WarehouseLayout';
+import { env } from '@/app/config/env';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 export function AppRouter() {
@@ -53,7 +54,15 @@ export function AppRouter() {
         element={<RequireDemoAuth roles={['DISTRIBUTOR_ADMIN', 'SALES']} />}
       >
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route
+            index
+            element={
+              <Navigate
+                to={env.isMockDataSource ? 'dashboard' : 'orders'}
+                replace
+              />
+            }
+          />
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route
             element={<RequireDemoAuth permission="analytics:view_global" />}

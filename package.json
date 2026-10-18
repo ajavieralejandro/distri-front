@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "vite --mode api",
     "dev:internal": "vite --mode internal",
     "build:internal": "tsc -b && vite build --mode internal",
     "build": "tsc -b && vite build",

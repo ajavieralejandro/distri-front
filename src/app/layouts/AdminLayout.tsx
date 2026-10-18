@@ -2,8 +2,15 @@ import { useId, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { env } from '@/app/config/env';
-import { getAppProfileLabel } from '@/features/auth/app-profile';
-import { useDemoSession, useLogoutMutation } from '@/features/auth/hooks';
+import {
+  APP_PROFILE_LABELS,
+  getAppProfileLabel,
+} from '@/features/auth/app-profile';
+import {
+  useApiSession,
+  useDemoSession,
+  useLogoutMutation,
+} from '@/features/auth/hooks';
 import { hasPermission } from '@/features/auth/permissions';
 import { ConnectionNavLink } from '@/features/connection/ConnectionNavLink';
 import { ResetDemoButton } from '@/features/demo/ResetDemoButton';
@@ -62,13 +69,26 @@ export function AdminLayout() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const navId = useId();
   const session = useDemoSession();
+  const apiSession = useApiSession();
   const logout = useLogoutMutation();
+  const displayName = env.isMockDataSource
+    ? session?.displayName
+    : apiSession?.displayName;
+  const profileLabel = env.isMockDataSource
+    ? session
+      ? getAppProfileLabel(session.role)
+      : ''
+    : apiSession
+      ? APP_PROFILE_LABELS[apiSession.role]
+      : '';
 
-  const visibleItems = adminNavItems.filter(
-    (item) =>
-      !item.permission ||
-      (session && hasPermission(session.role, item.permission)),
-  );
+  const visibleItems = env.isMockDataSource
+    ? adminNavItems.filter(
+        (item) =>
+          !item.permission ||
+          (session && hasPermission(session.role, item.permission)),
+      )
+    : adminNavItems.filter((item) => item.to === '/admin/orders');
 
   return (
     <>
@@ -121,8 +141,7 @@ export function AdminLayout() {
             </p>
             <div className="flex items-center gap-3">
               <span className="hidden text-sm sm:inline">
-                {session?.displayName} ·{' '}
-                {session ? getAppProfileLabel(session.role) : ''}
+                {displayName} · {profileLabel}
               </span>
               <ConnectionNavLink />
               <ResetDemoButton />

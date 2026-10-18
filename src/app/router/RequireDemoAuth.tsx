@@ -1,7 +1,8 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { env } from '@/app/config/env';
-import { useDemoSession } from '@/features/auth/hooks';
+import { canApiSessionAccess } from '@/features/auth/api-access';
+import { useApiSession, useDemoSession } from '@/features/auth/hooks';
 import { getHomePath, hasPermission } from '@/features/auth/permissions';
 import type { DemoRole, Permission } from '@/shared/types/demo';
 
@@ -16,8 +17,15 @@ type RequireDemoAuthProps = {
  */
 export function RequireDemoAuth({ roles, permission }: RequireDemoAuthProps) {
   const session = useDemoSession();
+  const apiSession = useApiSession();
 
   if (!env.isMockDataSource) {
+    if (!apiSession) {
+      return <Navigate to="/login" replace />;
+    }
+    if (!canApiSessionAccess(apiSession.role, { roles, permission })) {
+      return <Navigate to="/forbidden" replace />;
+    }
     return <Outlet />;
   }
 

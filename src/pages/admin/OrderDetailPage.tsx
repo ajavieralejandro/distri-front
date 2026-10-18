@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { env } from '@/app/config/env';
+import { CommercialOrderDetailPage } from '@/pages/admin/CommercialOrderDetailPage';
+
 import { useCustomerQuery } from '@/features/customers/hooks';
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge';
 import { OrderTimeline } from '@/features/orders/components/OrderTimeline';
@@ -40,6 +43,13 @@ const STATUS_PERMISSIONS: Partial<Record<OrderStatus, Permission>> = {
 };
 
 export function OrderDetailPage() {
+  if (!env.isMockDataSource) {
+    return <CommercialOrderDetailPage />;
+  }
+  return <DemoOrderDetailPage />;
+}
+
+function DemoOrderDetailPage() {
   const { orderId } = useParams();
   const query = useOrderQuery(orderId);
   const update = useUpdateOrderStatusMutation();

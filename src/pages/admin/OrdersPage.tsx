@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import { env } from '@/app/config/env';
+import { CommercialOrdersPage } from '@/pages/admin/CommercialOrdersPage';
+
 import { useCustomersQuery } from '@/features/customers/hooks';
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge';
 import { useOrdersQuery } from '@/features/orders/hooks';
@@ -21,6 +24,13 @@ const WAREHOUSE_NAMES: Record<string, string> = {
 };
 
 export function OrdersPage() {
+  if (!env.isMockDataSource) {
+    return <CommercialOrdersPage />;
+  }
+  return <DemoOrdersPage />;
+}
+
+function DemoOrdersPage() {
   const [params, setParams] = useSearchParams();
   const status = params.get('status') ?? '';
   const priority = params.get('priority') ?? '';
